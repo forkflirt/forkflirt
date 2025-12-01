@@ -1,6 +1,10 @@
-# ForkFlirt 💘
-
-**The Decentralized, Client-Agnostic Dating Protocol.**
+<div align="center">
+  <img src="./header.png" alt="ForkFlirt Banner" width="100%" />
+  
+  <h1>ForkFlirt 💘</h1>
+  
+  <p><strong>The Decentralized, Client-Agnostic Dating Protocol.</strong></p>
+</div>
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 [![Stack](https://img.shields.io/badge/Stack-SvelteKit_x_GitHub-orange.svg)](./client)
