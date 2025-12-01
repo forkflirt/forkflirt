@@ -1,0 +1,206 @@
+[
+  {
+    "id": "q_fandom_01",
+    "text": "Sci-Fi or Fantasy?",
+    "category": "Fandom",
+    "options": [
+      { "value": "0", "label": "Hard Sci-Fi (The Expanse, Trek)" },
+      { "value": "1", "label": "High Fantasy (LotR, D&D)" },
+      { "value": "2", "label": "I love both equally" },
+      { "value": "3", "label": "Neither is my thing" }
+    ]
+  },
+  {
+    "id": "q_gaming_01",
+    "text": "Video Games?",
+    "category": "Hobbies",
+    "options": [
+      { "value": "0", "label": "I play daily / It's a lifestyle" },
+      { "value": "1", "label": "I play casually on weekends" },
+      { "value": "2", "label": "I prefer Board Games / TTRPGs" },
+      { "value": "3", "label": "Not a gamer" }
+    ]
+  },
+  {
+    "id": "q_social_01",
+    "text": "Conventions & Crowds?",
+    "category": "Social",
+    "options": [
+      { "value": "0", "label": "I love them / I cosplay" },
+      { "value": "1", "label": "I go for the panels/merch" },
+      { "value": "2", "label": "Too crowded for me" }
+    ]
+  },
+  {
+    "id": "q_lifestyle_01",
+    "text": "Friday Night Preference?",
+    "category": "Lifestyle",
+    "options": [
+      { "value": "0", "label": "In a blanket burrito with a book/movie" },
+      { "value": "1", "label": "Hosting a game night / dinner" },
+      { "value": "2", "label": "Out at a bar/club" }
+    ]
+  },
+  {
+    "id": "q_anime_01",
+    "text": "Subs or Dubs?",
+    "category": "Fandom",
+    "options": [
+      { "value": "0", "label": "Subs only (Purist)" },
+      { "value": "1", "label": "Dubs are fine" },
+      { "value": "2", "label": "I don't watch Anime" }
+    ]
+  },
+  {
+    "id": "q_maker_01",
+    "text": "DIY & Crafting?",
+    "category": "Hobbies",
+    "options": [
+      { "value": "0", "label": "I build/make things (3D print, knit, wood)" },
+      { "value": "1", "label": "I fix things when they break" },
+      { "value": "2", "label": "I pay professionals" }
+    ]
+  },
+  {
+    "id": "q_pets_01",
+    "text": "Pets?",
+    "category": "Lifestyle",
+    "options": [
+      { "value": "0", "label": "Cats rule" },
+      { "value": "1", "label": "Dogs rule" },
+      { "value": "2", "label": "Reptiles / Exotics" },
+      { "value": "3", "label": "No pets" }
+    ]
+  },
+  {
+    "id": "q_kids_01",
+    "text": "Do you want children?",
+    "category": "Future",
+    "options": [
+      { "value": "0", "label": "Yes, definitely" },
+      { "value": "1", "label": "No, childfree by choice" },
+      { "value": "2", "label": "Undecided / Open to it" }
+    ]
+  },
+  {
+    "id": "q_politics_01",
+    "text": "Political Engagement?",
+    "category": "Values",
+    "options": [
+      { "value": "0", "label": "Actively engaged / Activist" },
+      { "value": "1", "label": "I stay informed but quiet" },
+      { "value": "2", "label": "I avoid politics" }
+    ]
+  },
+  {
+    "id": "q_comm_01",
+    "text": "Communication Style?",
+    "category": "Communication",
+    "options": [
+      { "value": "0", "label": "Text me all day" },
+      { "value": "1", "label": "Call / Facetime me" },
+      { "value": "2", "label": "Low maintenance (reply when free)" }
+    ]
+  },
+  {
+    "id": "q_mess_01",
+    "text": "Household Order?",
+    "category": "Lifestyle",
+    "options": [
+      { "value": "0", "label": "Minimalist / Spotless" },
+      { "value": "1", "label": "Organized Chaos (Cluttered but clean)" },
+      { "value": "2", "label": "Messy and I don't care" }
+    ]
+  },
+  {
+    "id": "q_money_01",
+    "text": "Spending Habits?",
+    "category": "Values",
+    "options": [
+      { "value": "0", "label": "Frugal / Saver" },
+      { "value": "1", "label": "Balanced" },
+      { "value": "2", "label": "I buy what I want (Gadgets/Collectibles)" }
+    ]
+  },
+  {
+    "id": "q_privacy_01",
+    "text": "Digital Privacy?",
+    "category": "Values",
+    "options": [
+      { "value": "0", "label": "De-Googled / Linux / VPN always" },
+      { "value": "1", "label": "Cautious but practical" },
+      { "value": "2", "label": "I have nothing to hide" }
+    ]
+  },
+  {
+    "id": "q_substance_01",
+    "text": "Cannabis?",
+    "category": "Lifestyle",
+    "options": [
+      { "value": "0", "label": "Regular user" },
+      { "value": "1", "label": "Socially / Occasionally" },
+      { "value": "2", "label": "Never" }
+    ]
+  },
+  {
+    "id": "q_travel_01",
+    "text": "Vacation Style?",
+    "category": "Lifestyle",
+    "options": [
+      { "value": "0", "label": "Backpacking / Adventure" },
+      { "value": "1", "label": "Resort / Relaxing" },
+      { "value": "2", "label": "Staycation / Homebody" }
+    ]
+  },
+  {
+    "id": "q_diet_01",
+    "text": "Dietary Restrictions?",
+    "category": "Lifestyle",
+    "options": [
+      { "value": "0", "label": "Vegan / Vegetarian" },
+      { "value": "1", "label": "Omnivore / I eat anything" },
+      { "value": "2", "label": "Specific health restrictions" }
+    ]
+  },
+  {
+    "id": "q_reading_01",
+    "text": "Books?",
+    "category": "Hobbies",
+    "options": [
+      { "value": "0", "label": "Fiction / Sci-Fi / Fantasy" },
+      { "value": "1", "label": "Non-fiction / Learning" },
+      { "value": "2", "label": "Audiobooks / Podcasts" },
+      { "value": "3", "label": "I don't really read" }
+    ]
+  },
+  {
+    "id": "q_piracy_01",
+    "text": "Digital Piracy?",
+    "category": "Ethics",
+    "options": [
+      { "value": "0", "label": "Information wants to be free" },
+      { "value": "1", "label": "Only if it's abandoned software" },
+      { "value": "2", "label": "No, support creators" }
+    ]
+  },
+  {
+    "id": "q_super_01",
+    "text": "Supernatural?",
+    "category": "Beliefs",
+    "options": [
+      { "value": "0", "label": "I want to believe (Aliens/Ghosts)" },
+      { "value": "1", "label": "Skeptical but open" },
+      { "value": "2", "label": "Hard materialist / Science only" }
+    ]
+  },
+  {
+    "id": "q_weird_01",
+    "text": "Weirdness Level?",
+    "category": "Personality",
+    "options": [
+      { "value": "0", "label": "I am deeply strange / Niche interests" },
+      { "value": "1", "label": "Quirky but functional" },
+      { "value": "2", "label": "Normie" }
+    ]
+  }
+]

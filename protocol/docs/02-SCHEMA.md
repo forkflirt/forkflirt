@@ -1,6 +1,9 @@
+Here is the updated **`protocol/docs/02-SCHEMA.md`** with the expanded `social` object to include common platforms (Bluesky, Discord, Instagram, etc.).
+
+````markdown
 # Schema Definition: profile.json
 
-**Version:** 1.2.0
+**Version:** 1.3.0
 **Status:** Stable
 
 ## 1. File Location
@@ -14,11 +17,11 @@ To keep the repository clean and support the Monorepo structure, the profile dat
 
 ```json
 {
-  "$schema": "https://forkflirt.org/schema/v1.2.json",
+  "$schema": "https://forkflirt.org/schema/v1.3.json",
   "meta": {
-    "generated_by": "forkflirt-client-web v1.2.0",
+    "generated_by": "forkflirt-client-web v1.4.0",
     "updated_at": "2025-12-01T14:00:00Z",
-    "version": "1.2.0"
+    "version": "1.3.0"
   },
   "identity": {
     "display_name": "String (Max 50 chars)",
@@ -30,6 +33,16 @@ To keep the repository clean and support the Monorepo structure, the profile dat
       "city": "String",
       "country_code": "ISO-3166-1 alpha-2 (e.g., 'US')",
       "geo_hash": "String (Optional, 4-char precision)"
+    },
+    "social": {
+      "keybase": "String (username only)",
+      "mastodon": "String (e.g., @user@instance.social)",
+      "bluesky": "String (e.g., @handle.bsky.social)",
+      "twitter": "String (username only)",
+      "instagram": "String (username only)",
+      "discord": "String (username only)",
+      "tiktok": "String  (username only)",
+      "linkedin": "String (username or full URL)"
     }
   },
   "details": {
@@ -63,7 +76,14 @@ To keep the repository clean and support the Monorepo structure, the profile dat
         "caption": "Hiking in the Alps"
       }
     ],
-    "tags": ["scifi", "rust", "bouldering"]
+    "tags": ["scifi", "rust", "bouldering"],
+    "links": [
+      {
+        "label": "My Blog",
+        "url": "https://my-blog.com"
+        // ^ The client will attempt DNS/Well-Known verification on these
+      }
+    ]
   },
   "survey": [
     {
@@ -77,7 +97,7 @@ To keep the repository clean and support the Monorepo structure, the profile dat
     "public_key": "PEM Encoded RSA-OAEP Public Key",
     "fingerprint": "SHA-256 Hash of the Public Key",
     "key_type": "RSA-OAEP-2048",
-    "signature": "Optional: PGP Signature of the public_key using Keybase PGP Key"
+    "signature": "Optional: PGP Signature"
   },
   "preferences": {
     "looking_for": ["relationship", "collaboration"],
@@ -86,6 +106,7 @@ To keep the repository clean and support the Monorepo structure, the profile dat
   }
 }
 ```
+````
 
 ## 3. The Ignore File (`.forkflirtignore`)
 
@@ -112,3 +133,7 @@ filter: keyword:nft
     - Clients calculate match percentages based on the intersection of `answer_choice` and `acceptable_answers` weighted by `importance`.
 4.  **Age:** Strictly 18+.
 5.  **Signatures:** If `security.signature` is present, clients MUST fetch the user's Keybase PGP key and verify the signature against `security.public_key`. If verification fails, the profile should be flagged as compromised.
+6.  **Social Verification:**
+    - If `identity.social.keybase` is present, the client SHOULD attempt Keybase verification.
+    - If `identity.social.mastodon` is present, the client SHOULD attempt Back-link verification.
+    - For domains in `content.links`, the client SHOULD attempt DNS and Well-Known file verification.

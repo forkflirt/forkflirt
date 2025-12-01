@@ -1,8 +1,8 @@
-# ForkFlirt Client Specification v1.3 (Monorepo)
+# ForkFlirt Client Specification v1.4
 
-**Role:** You are a Senior Frontend Architect building a "Serverless" Dating App.
-**Stack:** SvelteKit (Static Adapter), TailwindCSS, Octokit, WebCrypto API, Zod.
-**Context:** This is a Monorepo. The App source is in `/client`. User Data is in `/profile`.
+**Role:** Senior Frontend Architect
+**Stack:** SvelteKit (Static Adapter), TailwindCSS, Octokit, WebCrypto API, Zod, IDB-Keyval.
+**Context:** Monorepo. App is in `/client`, User Data is in `/profile`.
 
 ## 1. Core Architecture
 
@@ -30,10 +30,12 @@ The generated SvelteKit project must follow this structure inside the `/client` 
 │   │   ├── moderation.ts   # .forkflirtignore parser & blocklist logic
 │   │   └── verification.ts # DNS & Keybase identity checks
 │   ├── schemas/
-│   │   └── profile.ts      # Zod definition matching Schema v1.1
+│   │   └── profile.ts      # Zod definition matching Schema v1.2
 │   ├── stores/
 │   │   ├── user.ts         # Current user state & keys
 │   │   ├── feed.ts         # Discovery queue (Filtered & Sorted)
+│   ├── utils/
+│   │   └── images.ts       # Asset URL resolution
 │   └── components/
 │       ├── ui/             # Atomic components
 │       ├── profile/        # Complex Editor Forms (Multi-step)
@@ -55,30 +57,27 @@ Since the app is hosted via GitHub Pages, it must access data via **HTTP (Raw)**
 - **Profile Path:** `profile/profile.json`
 - **Assets Path:** `profile/assets/`
 - **Read URL:** `https://raw.githubusercontent.com/{username}/{repo}/main/profile/profile.json`
-- **Image URL Transformation:**
-  - Input in JSON: `./assets/me.jpg`
-  - Rendered URL: `https://raw.githubusercontent.com/{username}/{repo}/main/profile/assets/me.jpg`
 
 ## 4. Key Feature Requirements
 
-### 4.1 Landing Page & Mode Detection
+### 4.1 Storage & Security
 
-The root route (`/`) must behave differently based on Auth state.
+- **Secrets:** Private Keys MUST be stored in `IndexedDB` (using `idb-keyval` or similar). **NEVER** use `localStorage` for private keys (XSS risk).
+- **Cache:** Public profiles and discovery results should be cached in `localStorage` with a timestamp.
+  - **TTL:** 1 hour for public feeds.
+  - **Strategy:** Stale-While-Revalidate (Show cached immediately, fetch fresh in background).
 
-1.  **Unauthenticated (Public View):**
-    - Fetch `profile/profile.json` relative to the current URL.
-    - Render the Host's Profile Card (ReadOnly).
-    - Show a "Login / Connect" button.
-2.  **Authenticated (Guest):**
-    - User is logged in, but `login !== repo_owner`.
-    - Show Host's Profile Card.
-    - Enable "Message" button (if keys exist).
-    - Show "Go to Feed" button.
-3.  **Authenticated (Owner):**
-    - User is logged in AND `login === repo_owner`.
-    - Redirect to `/app/swipe` (or `/setup` if profile is missing).
+### 4.2 Image Handling (`lib/utils/images.ts`)
 
-### 4.2 The "Wizard" (Onboarding)
+We cannot assume image paths. Implement `resolveAssetUrl(path, username, repo)`:
+
+- **Logic:**
+  - If `path` starts with `http`, return as-is.
+  - If `path` is relative (`./assets/img.jpg`), transform to:
+    `https://raw.githubusercontent.com/{username}/{repo}/main/profile/assets/img.jpg`
+- **Error Handling:** Add an `onerror` handler to image tags to show a "Missing Asset" placeholder if the user deleted the file.
+
+### 4.3 The "Wizard" (Onboarding)
 
 Triggered ONLY if **Authenticated (Owner)** and `profile.json` is missing.
 
@@ -91,20 +90,21 @@ Triggered ONLY if **Authenticated (Owner)** and `profile.json` is missing.
   2.  Upload images to `profile/assets/`.
   3.  Commit both to the `main` branch using Octokit.
 
-### 4.3 The Matching Algorithm (`lib/logic/matching.ts`)
+### 4.4 Matching Algorithm (`lib/logic/matching.ts`)
 
 The matching logic is bidirectional.
 
 1.  **Fetch:** Query `topic:forkflirt-profile`.
 2.  **Parse:** Validate `profile.json` via Zod.
-3.  **Scoring:**
+3.  **Constraint:** If `overlapping_questions < 3`, do not show a Match %. Show "Insufficient Data."
+4.  **Scoring:**
     - Map `importance` to points: `mandatory`(250), `very_important`(50), `somewhat`(10), `little`(1), `irrelevant`(0).
     - Calculate **Score A->B**: (Points Earned / Total Possible Points).
     - Calculate **Score B->A**: (Points Earned / Total Possible Points).
     - **Final Match %:** The Geometric Mean: $\sqrt{Score_{AB} \times Score_{BA}}$.
-4.  **Sorting:** Feed must be sorted by Final Match %.
+5.  **Sorting:** Feed must be sorted by Final Match %.
 
-### 4.4 Decentralized Moderation (`lib/logic/moderation.ts`)
+### 4.5 Decentralized Moderation (`lib/logic/moderation.ts`)
 
 Before rendering the feed, the client must build a "Block Ruleset".
 
@@ -113,37 +113,53 @@ Before rendering the feed, the client must build a "Block Ruleset".
 3.  **Imports:** Recursively fetch `import:` URLs (max depth 2) to load shared blocklists.
 4.  **Apply:** Remove any candidate from the feed that matches a Rule.
 
-### 4.5 Verification System (`lib/logic/verification.ts`)
+### 4.6 Verification System (`lib/logic/verification.ts`)
 
-Display "Trust Signals" on the profile card.
+Display "Trust Signals" on the profile card. Support multiple providers to avoid lock-in.
 
-1.  **DNS Verification:** Check for TXT record `forkflirt-verify={username}` via Google Public DNS JSON API.
-2.  **Keybase Verification:** Fetch Keybase user; check if they have a `proof_type: github` that matches the repo owner. If yes, display all their other proofs.
+1.  **Keybase Verification:**
 
-### 4.6 Encrypted Messaging
+    - Fetch Keybase user API.
+    - Check if they have a `proof_type: github` that matches the repo owner.
+    - If yes, display all their other proofs.
+
+2.  **Mastodon Verification (Back-Link):**
+    - **Input:** User provides Mastodon URL.
+    - **Fetch:** `https://{instance}/api/v1/accounts/lookup?acct={username}`.
+    - **Logic:** Scan `note` (Bio) and `fields` for the ForkFlirt repo URL.
+3.  **DNS Verification:**
+
+    - Fetch Google DNS JSON (`https://dns.google/resolve...`).
+    - **Logic:** Iterate through **ALL** items in the `Answer` array.
+    - Check for `forkflirt-verify={username}`.
+
+4.  **Well-Known Resource Verification (File Upload):**
+    - **Input:** User provides a Personal Domain (e.g., `https://my-blog.com`).
+    - **Fetch:** `GET https://my-blog.com/.well-known/forkflirt.json`.
+    - **Logic:** Parse JSON and check if `forkflirt_verify` matches the repo owner.
+    - **Error Handling:** If the fetch fails due to CORS (Network Error), display a specific warning: _"Verification failed: Your server is blocking the request. Please enable CORS on your .well-known folder."_
+
+### 4.7 Encrypted Messaging
 
 - **Send:**
+
   1.  Fetch Recipient's `profile/profile.json`.
   2.  Extract `security.public_key`.
   3.  Generate random AES session key.
   4.  Encrypt Message (AES) + Encrypt AES Key (RSA).
   5.  Post as GitHub Issue: `ForkFlirt Handshake: [Hash]`.
+
 - **Receive:**
+
   1.  Poll Issues with `ForkFlirt Handshake`.
   2.  Decrypt using Private Key from `IndexedDB`.
 
-### 4.7 Advanced Security (PGP Check)
+### 4.8 Base Path & Routing
 
-If `profile.json` contains `security.signature`:
+- **Configuration:** `svelte.config.js` must use `paths.base`.
+- **Usage:** All internal links (`<a href>`) and asset references (`<img src>`) must use the SvelteKit `$app/paths` module (e.g., `{base}/app/swipe`). Failing to do this will break the app when deployed to `github.io/repo-name/`.
 
-1.  Lazy-load `openpgp.js` (to save bundle size).
-2.  Fetch the user's PGP key from Keybase.
-3.  Verify the signature against the `public_key`.
-4.  If verification fails, display a **"Security Mismatch"** error overlay on the profile and disable the "Message" button.
+## 5. Resilience & Error Handling
 
-## 5. Technical Constraints
-
-- **Zod Schema:** Must strictly validate v1.1 features (Enum checks for vices, Survey structure).
-- **Images:** Use `raw.githubusercontent.com` proxies. Handle 404s gracefully with a placeholder.
-- **API Limits:** If OAuth is not present, warn the user about rate limits (60req/hr).
-- **Base Path:** Ensure `svelte.config.js` `paths.base` is respected for routing on GitHub Pages.
+- **Octokit Failures:** Wrap all API calls. If 403 (Rate Limit), show a user-friendly "GitHub is tired, come back in an hour" modal.
+- **Malformed Profiles:** If a `profile.json` fails Zod validation, log it to console and **skip** it in the feed. Do not crash the app.

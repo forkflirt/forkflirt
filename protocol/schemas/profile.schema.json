@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ForkFlirt Profile v1.1",
+  "title": "ForkFlirt Profile v1.3",
   "type": "object",
   "required": ["identity", "security", "content"],
   "properties": {
@@ -28,6 +28,19 @@
             "city": { "type": "string" },
             "country_code": { "type": "string", "pattern": "^[A-Z]{2}$" },
             "geo_hash": { "type": "string" }
+          }
+        },
+        "social": {
+          "type": "object",
+          "properties": {
+            "keybase": { "type": "string" },
+            "mastodon": { "type": "string" },
+            "bluesky": { "type": "string" },
+            "twitter": { "type": "string" },
+            "instagram": { "type": "string" },
+            "discord": { "type": "string" },
+            "tiktok": { "type": "string" },
+            "linkedin": { "type": "string" }
           }
         }
       }
@@ -74,7 +87,6 @@
         "bio": { "type": "string", "maxLength": 2000 },
         "essays": {
           "type": "array",
-          "description": "OkC style open-ended prompts",
           "items": {
             "type": "object",
             "required": ["prompt", "answer"],
@@ -96,12 +108,21 @@
             }
           }
         },
-        "tags": { "type": "array", "items": { "type": "string" } }
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            }
+          }
+        }
       }
     },
     "survey": {
       "type": "array",
-      "description": "The '1000 Questions' logic for algorithm matching",
       "items": {
         "type": "object",
         "required": ["question_id", "answer_choice"],
@@ -131,7 +152,8 @@
       "properties": {
         "public_key": { "type": "string" },
         "fingerprint": { "type": "string" },
-        "key_type": { "type": "string" }
+        "key_type": { "type": "string" },
+        "signature": { "type": "string" }
       }
     },
     "preferences": {
@@ -139,7 +161,14 @@
       "properties": {
         "looking_for": { "type": "array", "items": { "type": "string" } },
         "age_range": { "type": "array", "items": { "type": "integer" } },
-        "distance_km": { "type": "integer" }
+        "distance_km": { "type": "integer" },
+        "match_filter": {
+          "type": "object",
+          "properties": {
+            "include_tags": { "type": "array", "items": { "type": "string" } },
+            "exclude_tags": { "type": "array", "items": { "type": "string" } }
+          }
+        }
       }
     }
   }
