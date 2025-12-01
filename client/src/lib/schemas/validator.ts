@@ -1,6 +1,69 @@
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
+import DOMPurify from 'dompurify';
 import profileSchema from "../../../../protocol/schemas/profile.schema.json";
+
+// --- Input Sanitization ---
+
+const SANITIZATION_CONFIG = {
+  ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u'],
+  ALLOWED_ATTR: ['class'],
+  ALLOW_DATA_ATTR: false
+};
+
+function sanitizeUserInput(input: string): string {
+  if (typeof input !== 'string') return input;
+  return DOMPurify.sanitize(input, SANITIZATION_CONFIG);
+}
+
+function sanitizeProfile(data: any): any {
+  if (!data) return data;
+
+  // Sanitize text fields
+  if (data.content?.bio) {
+    data.content.bio = sanitizeUserInput(data.content.bio);
+  }
+
+  if (data.content?.essays) {
+    data.content.essays.forEach((essay: { prompt: string; answer: string }) => {
+      if (essay.answer) {
+        essay.answer = sanitizeUserInput(essay.answer);
+      }
+    });
+  }
+
+  if (data.identity?.display_name) {
+    data.identity.display_name = sanitizeUserInput(data.identity.display_name);
+  }
+
+  if (data.identity?.pronouns) {
+    data.identity.pronouns = sanitizeUserInput(data.identity.pronouns);
+  }
+
+  if (data.identity?.gender) {
+    data.identity.gender = sanitizeUserInput(data.identity.gender);
+  }
+
+  if (data.identity?.orientation) {
+    data.identity.orientation = sanitizeUserInput(data.identity.orientation);
+  }
+
+  // Sanitize location fields
+  if (data.identity?.location?.city) {
+    data.identity.location.city = sanitizeUserInput(data.identity.location.city);
+  }
+
+  // Sanitize details
+  if (data.details?.job_title) {
+    data.details.job_title = sanitizeUserInput(data.details.job_title);
+  }
+
+  if (data.details?.education) {
+    data.details.education = sanitizeUserInput(data.details.education);
+  }
+
+  return data;
+}
 
 // --- Type Definitions ---
 
@@ -83,16 +146,25 @@ export interface Profile {
 const ajv = new Ajv({
   allErrors: true,
   coerceTypes: false,
+  strict: true,
+  strictSchema: true,
+  removeAdditional: true,
+  useDefaults: false,
 });
+
 addFormats(ajv);
 
 const _validate = ajv.compile(profileSchema);
 
 export function validateProfile(data: any) {
-  const valid = _validate(data);
+  // First sanitize the data
+  const sanitizedData = sanitizeProfile(data);
+
+  const valid = _validate(sanitizedData);
   return {
     valid,
     errors: _validate.errors,
+    sanitizedData
   };
 }
 

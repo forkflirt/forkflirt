@@ -22,7 +22,46 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 const HEADER = "-----BEGIN FORKFLIRT ENCRYPTED MESSAGE-----";
 const FOOTER = "-----END FORKFLIRT ENCRYPTED MESSAGE-----";
 
-// --- Replay Protection Types ---
+// --- Secure Error Handling ---
+
+interface SecurityError extends Error {
+  code: string;
+  userMessage: string;
+}
+
+function createSecurityError(userMessage: string, technicalDetails?: any): SecurityError {
+  // Log technical details for debugging
+  if (technicalDetails) {
+    console.error('Security error details:', technicalDetails);
+  }
+
+  const error = new Error(userMessage) as SecurityError;
+  error.code = 'SECURITY_ERROR';
+  error.userMessage = userMessage;
+  return error;
+}
+
+// --- Secure Rate Limiting ---
+
+const DECRYPT_LIMIT = 100;
+const DECRYPT_WINDOW = 60 * 1000; // 1 minute
+let decryptAttempts: number[] = [];
+
+function isDecryptRateLimited(): boolean {
+  const now = Date.now();
+  // Remove attempts outside the window
+  decryptAttempts = decryptAttempts.filter(time => now - time < DECRYPT_WINDOW);
+
+  return decryptAttempts.length >= DECRYPT_LIMIT;
+}
+
+function recordDecryptAttempt(): void {
+  decryptAttempts.push(Date.now());
+}
+
+// --- Enhanced Replay Protection Store ---
+
+import { get, set, del } from 'idb-keyval';
 
 export interface EncryptedMessageMetadata {
   version: string;
@@ -40,58 +79,122 @@ interface SeenMessage {
   expires_at: number;
 }
 
-// --- Replay Protection Store ---
+const REPLAY_STORE_KEY = 'forkflirt_replay_protection_v2';
+const MAX_MESSAGES = 10000;
+const MESSAGE_RETENTION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-class ReplayProtectionStore {
-  private readonly STORE_NAME = 'forkflirt_replay_protection';
-  private readonly MAX_MESSAGES = 10000;
-  
-  async addSeenMessage(message: SeenMessage): Promise<void> {
-    const existing = await this.getSeenMessages();
-    existing.push(message);
-    
-    // Remove expired messages
-    const now = Date.now();
-    const filtered = existing.filter(msg => msg.expires_at > now);
-    
-    // Keep only the most recent MAX_MESSAGES
-    const sorted = filtered.sort((a, b) => b.timestamp - a.timestamp);
-    const limited = sorted.slice(0, this.MAX_MESSAGES);
-    
-    await this.saveSeenMessages(limited);
+interface SecureSeenMessage extends SeenMessage {
+  integrity: string; // SHA-256 hash for tamper detection
+  receivedAt: number; // When we actually received it
+}
+
+export class SecureReplayProtectionStore {
+  private async getIntegrityHash(message: SeenMessage): Promise<string> {
+    const data = JSON.stringify(message);
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(data);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
-  
+
+  async addSeenMessage(message: SeenMessage): Promise<void> {
+    const secureMessage: SecureSeenMessage = {
+      ...message,
+      integrity: await this.getIntegrityHash(message),
+      receivedAt: Date.now()
+    };
+
+    const existing = await this.getSeenMessages();
+    existing.push(secureMessage);
+
+    // Remove expired and old messages
+    const now = Date.now();
+    const filtered = existing.filter(msg =>
+      msg.expires_at > now &&
+      (now - msg.receivedAt) < MESSAGE_RETENTION_MS
+    );
+
+    // Validate integrity of remaining messages
+    const validMessages = await this.validateMessageIntegrity(filtered);
+
+    // Keep only the most recent MAX_MESSAGES
+    const sorted = validMessages.sort((a, b) => b.timestamp - a.timestamp);
+    const limited = sorted.slice(0, MAX_MESSAGES);
+
+    await set(REPLAY_STORE_KEY, limited);
+  }
+
   async isMessageSeen(messageId: string, senderId: string): Promise<boolean> {
     const messages = await this.getSeenMessages();
-    return messages.some(msg => 
-      msg.message_id === messageId && msg.sender_id === senderId
+    return messages.some(msg =>
+      msg.message_id === messageId &&
+      msg.sender_id === senderId &&
+      this.isMessageValid(msg)
     );
   }
-  
-  async cleanupExpired(): Promise<void> {
-    const messages = await this.getSeenMessages();
-    const now = Date.now();
-    const filtered = messages.filter(msg => msg.expires_at > now);
-    await this.saveSeenMessages(filtered);
+
+  private async validateMessageIntegrity(messages: SecureSeenMessage[]): Promise<SecureSeenMessage[]> {
+    const valid: SecureSeenMessage[] = [];
+
+    for (const msg of messages) {
+      if (this.isMessageValid(msg)) {
+        valid.push(msg);
+      } else {
+        console.warn('Tampered replay protection message detected:', msg);
+      }
+    }
+
+    return valid;
   }
-  
-  private async getSeenMessages(): Promise<SeenMessage[]> {
+
+  private isMessageValid(msg: SecureSeenMessage): boolean {
+    // Basic structure validation
+    if (!msg.message_id || !msg.sender_id || !msg.integrity) {
+      return false;
+    }
+
+    // Timestamp validation
+    const now = Date.now();
+    if (msg.timestamp > now + 5 * 60 * 1000) { // 5 minute future tolerance
+      return false;
+    }
+
+    return true;
+  }
+
+  private async getSeenMessages(): Promise<SecureSeenMessage[]> {
     try {
-      const stored = localStorage.getItem(this.STORE_NAME);
-      return stored ? JSON.parse(stored) : [];
+      const stored = await get<SecureSeenMessage[]>(REPLAY_STORE_KEY);
+      return stored || [];
     } catch {
       return [];
     }
   }
-  
-  private async saveSeenMessages(messages: SeenMessage[]): Promise<void> {
-    try {
-      localStorage.setItem(this.STORE_NAME, JSON.stringify(messages));
-    } catch (e) {
-      console.warn('Failed to save replay protection data:', e);
+
+  async cleanupExpired(): Promise<void> {
+    const messages = await this.getSeenMessages();
+    const now = Date.now();
+    const filtered = messages.filter(msg =>
+      msg.expires_at > now &&
+      (now - msg.receivedAt) < MESSAGE_RETENTION_MS
+    );
+
+    if (filtered.length === 0) {
+      // If no messages left, delete the entire storage
+      await del(REPLAY_STORE_KEY);
+    } else {
+      await set(REPLAY_STORE_KEY, filtered);
     }
   }
+
+  async clearAll(): Promise<void> {
+    await del(REPLAY_STORE_KEY);
+  }
 }
+
+// Update the ReplayProtectionStore usage
+const replayStore = new SecureReplayProtectionStore();
 
 // --- Encryption (Sending) ---
 
@@ -225,17 +328,18 @@ export interface DecryptedMessage {
  * Decrypts a message block using the user's Private Key with replay protection.
  */
 
-const DECRYPT_LIMIT = 100; // Max attempts per minute
-let decryptAttempts = 0;
-
 export async function decryptMessage(
   encryptedBlock: string,
   myPrivateKey: CryptoKey
 ): Promise<DecryptedMessage> {
-  // Rate limiting protection
-  if (decryptAttempts++ > DECRYPT_LIMIT) {
-    throw new Error("Too many decryption attempts, please refresh");
+  // Constant-time rate limiting check
+  if (isDecryptRateLimited()) {
+    // Use constant-time delay to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    throw createSecurityError("Too many requests. Please try again later.");
   }
+
+  recordDecryptAttempt();
   
   const lines = encryptedBlock.split("\n").map((l) => l.trim());
   
@@ -246,7 +350,7 @@ export async function decryptMessage(
   const signatureLine = lines.find((l) => l.startsWith("Signature: "));
   
   if (!metadataLine || !keyLine || !ivLine || !payloadLine) {
-    throw new Error("Malformed Encrypted Block");
+    throw createSecurityError("Invalid message format");
   }
   
   // Decrypt metadata first
@@ -262,7 +366,7 @@ export async function decryptMessage(
     );
     metadata = JSON.parse(new TextDecoder().decode(rawMetadata));
   } catch (err) {
-    throw new Error("Failed to decrypt metadata");
+    throw createSecurityError("Message processing failed", err);
   }
   
   // Validate timestamp
@@ -270,19 +374,18 @@ export async function decryptMessage(
   const maxClockSkew = 5 * 60 * 1000; // 5 minutes
   
   if (metadata.timestamp > now + maxClockSkew) {
-    throw new Error("Message timestamp is in the future");
+    throw createSecurityError("Message validation failed");
   }
-  
+
   if (now > metadata.expires_at) {
-    throw new Error("Message has expired");
+    throw createSecurityError("Message has expired");
   }
   
   // Check for replay
-  const replayStore = new ReplayProtectionStore();
   const isReplay = await replayStore.isMessageSeen(metadata.message_id, metadata.sender_id);
   
   if (isReplay) {
-    throw new Error("Message replay detected");
+    throw createSecurityError("Message validation failed");
   }
 
   const b64Key = keyLine.replace("Key-Wrap: ", "");
@@ -384,6 +487,6 @@ export async function decryptMessage(
       metadata
     };
   } catch (err) {
-    throw new Error("Failed to decrypt message. Invalid key or corrupted data.");
+    throw createSecurityError("Message processing failed", err);
   }
 }

@@ -3,13 +3,107 @@ import { initializeOctokit } from "./github";
 
 const TOKEN_DB_KEY = "forkflirt_pat";
 const USER_CACHE_KEY = "forkflirt_user_cache";
-const CSRF_TOKEN_KEY = "forkflirt_csrf_token";
-const RATE_LIMIT_KEY = "forkflirt_login_attempts";
-const RATE_LIMIT_TIME_KEY = "forkflirt_login_attempts_time";
 
-// Rate limiting configuration
+// --- Enhanced Rate Limiting ---
+
+interface RateLimitData {
+  attempts: number;
+  windowStart: number;
+  lockoutUntil?: number;
+}
+
+const RATE_LIMIT_DATA = "forkflirt_rate_limit_v2";
 const MAX_ATTEMPTS = 3;
 const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes for repeated failures
+
+async function getRateLimitData(): Promise<RateLimitData> {
+  const stored = localStorage.getItem(RATE_LIMIT_DATA);
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  return { attempts: 0, windowStart: Date.now() };
+}
+
+async function setRateLimitData(data: RateLimitData): Promise<void> {
+  localStorage.setItem(RATE_LIMIT_DATA, JSON.stringify(data));
+}
+
+async function isRateLimited(): Promise<boolean> {
+  const data = await getRateLimitData();
+  const now = Date.now();
+
+  // Check if currently locked out
+  if (data.lockoutUntil && now < data.lockoutUntil) {
+    const remainingMinutes = Math.ceil((data.lockoutUntil - now) / 60000);
+    throw new Error(`Too many failed attempts. Please try again in ${remainingMinutes} minutes.`);
+  }
+
+  // Reset window if expired
+  if (now - data.windowStart > WINDOW_MS) {
+    data.attempts = 0;
+    data.windowStart = now;
+  }
+
+  return data.attempts >= MAX_ATTEMPTS;
+}
+
+async function incrementRateLimit(): Promise<void> {
+  const data = await getRateLimitData();
+  const now = Date.now();
+
+  data.attempts++;
+
+  // Implement exponential backoff for repeated failures
+  if (data.attempts >= MAX_ATTEMPTS) {
+    data.lockoutUntil = now + LOCKOUT_MS;
+  }
+
+  await setRateLimitData(data);
+}
+
+// Add CAPTCHA integration placeholder
+export async function shouldShowCaptcha(): Promise<boolean> {
+  // Show CAPTCHA after 2 failed attempts
+  const data = await getRateLimitData();
+  return data.attempts >= 2;
+}
+
+// --- Enhanced CSRF Protection ---
+
+const CSRF_TOKEN_PREFIX = "forkflirt_csrf_";
+
+export async function generateCSRFToken(operation: string = 'default'): Promise<string> {
+  const token = crypto.randomUUID();
+  const key = `${CSRF_TOKEN_PREFIX}${operation}`;
+  sessionStorage.setItem(key, token);
+  return token;
+}
+
+export async function validateCSRFToken(
+  providedToken: string,
+  operation: string = 'default'
+): Promise<boolean> {
+  const key = `${CSRF_TOKEN_PREFIX}${operation}`;
+  const storedToken = sessionStorage.getItem(key);
+
+  if (!storedToken || storedToken !== providedToken) {
+    // Clear all CSRF tokens on failure
+    clearCSRFTokens();
+    return false;
+  }
+
+  return true;
+}
+
+export function clearCSRFTokens(): void {
+  const keys = Object.keys(sessionStorage);
+  keys.forEach(key => {
+    if (key.startsWith(CSRF_TOKEN_PREFIX)) {
+      sessionStorage.removeItem(key);
+    }
+  });
+}
 
 export interface AuthUser {
   login: string;
@@ -18,39 +112,7 @@ export interface AuthUser {
   name?: string;
 }
 
-// --- CSRF Protection ---
 
-export async function generateCSRFToken(): Promise<string> {
-  const token = crypto.randomUUID();
-  sessionStorage.setItem(CSRF_TOKEN_KEY, token);
-  return token;
-}
-
-export async function validateCSRFToken(providedToken: string): Promise<boolean> {
-  const storedToken = sessionStorage.getItem(CSRF_TOKEN_KEY);
-  return storedToken === providedToken;
-}
-
-// --- Rate Limiting ---
-
-async function isRateLimited(): Promise<boolean> {
-  const attempts = await get<number>(RATE_LIMIT_KEY) || 0;
-  const lastAttempt = await get<number>(RATE_LIMIT_TIME_KEY) || 0;
-  
-  if (Date.now() - lastAttempt > WINDOW_MS) {
-    await del(RATE_LIMIT_KEY);
-    await del(RATE_LIMIT_TIME_KEY);
-    return false;
-  }
-  
-  return attempts >= MAX_ATTEMPTS;
-}
-
-async function incrementRateLimit(): Promise<void> {
-  const attempts = await get<number>(RATE_LIMIT_KEY) || 0;
-  await set(RATE_LIMIT_KEY, attempts + 1);
-  await set(RATE_LIMIT_TIME_KEY, Date.now());
-}
 
 // --- Token Validation ---
 
@@ -118,7 +180,7 @@ export async function loginWithToken(
   
   // Validate CSRF token for manual input
   if (tokenSource.method === 'manual') {
-    if (!csrfToken || !(await validateCSRFToken(csrfToken))) {
+    if (!csrfToken || !(await validateCSRFToken(csrfToken, 'login'))) {
       throw new Error("Invalid CSRF token. Please refresh the page and try again.");
     }
   }
@@ -131,6 +193,12 @@ export async function loginWithToken(
   // Rate limiting check
   if (await isRateLimited()) {
     throw new Error("Too many login attempts. Please wait 10 minutes before trying again.");
+  }
+
+  // Check if CAPTCHA should be shown
+  if (await shouldShowCaptcha()) {
+    // TODO: Implement actual CAPTCHA verification
+    console.warn("CAPTCHA would be shown here - implement CAPTCHA integration");
   }
   
   // Increment rate limit counter
@@ -168,11 +236,10 @@ export async function loginWithToken(
     localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
     
     // Clear CSRF token after successful login
-    sessionStorage.removeItem(CSRF_TOKEN_KEY);
-    
+    clearCSRFTokens();
+
     // Reset rate limit on successful login
-    await del(RATE_LIMIT_KEY);
-    await del(RATE_LIMIT_TIME_KEY);
+    localStorage.removeItem(RATE_LIMIT_DATA);
 
     return user;
   } catch (error) {

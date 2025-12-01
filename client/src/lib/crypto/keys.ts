@@ -1,4 +1,5 @@
 import { get, set, del } from "idb-keyval";
+import zxcvbn from 'zxcvbn';
 
 const PRIVATE_KEY_DB = "forkflirt_priv_key";
 const PUBLIC_KEY_DB = "forkflirt_pub_key";
@@ -31,13 +32,46 @@ export function validatePassphrase(passphrase: string): PassphraseValidation {
   const hasLetters = /[a-zA-Z]/.test(passphrase);
   const hasNumbers = /\d/.test(passphrase);
   const hasSymbols = /[^\w\s]/.test(passphrase);
-  
+
+  // Basic requirements
   if (words.length < 4) return { valid: false, reason: "Must be at least 4 words" };
   if (passphrase.length < 12) return { valid: false, reason: "Must be at least 12 characters" };
-  
+
   const complexityCount = [hasLetters, hasNumbers, hasSymbols].filter(Boolean).length;
   if (complexityCount < 2) return { valid: false, reason: "Must include at least 2 of: letters, numbers, symbols" };
-  
+
+  // Enhanced strength validation
+  const strength = zxcvbn(passphrase);
+
+  if (strength.score < 3) {
+    const suggestions = strength.feedback?.suggestions || [];
+    const warning = strength.feedback?.warning || '';
+
+    let reason = "Passphrase is too weak. ";
+    if (warning) reason += warning + ". ";
+    if (suggestions.length > 0) reason += suggestions.join('. ');
+
+    return { valid: false, reason };
+  }
+
+  // Check for common patterns
+  const commonPatterns = [
+    /password/i,
+    /123456/,
+    /qwerty/i,
+    /letmein/i,
+    /admin/i
+  ];
+
+  if (commonPatterns.some(pattern => pattern.test(passphrase))) {
+    return { valid: false, reason: "Passphrase contains common patterns that are easily guessed" };
+  }
+
+  // Check for sequential characters
+  if (/(.)\1{2,}/.test(passphrase)) {
+    return { valid: false, reason: "Passphrase contains repeated characters" };
+  }
+
   return { valid: true };
 }
 
@@ -294,7 +328,17 @@ export async function deleteIdentity(): Promise<void> {
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
     }
-    
+
+    // Clear replay protection from IndexedDB
+    try {
+      // Import the SecureReplayProtectionStore and create an instance
+      const { SecureReplayProtectionStore } = await import('./cipher.js');
+      const replayStore = new SecureReplayProtectionStore();
+      await replayStore.clearAll();
+    } catch (error) {
+      console.warn('Failed to clear replay protection from IndexedDB:', error);
+    }
+
     console.log('✅ All cryptographic identity data deleted successfully');
   } catch (error) {
     console.error('❌ Failed to delete identity:', error);

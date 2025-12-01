@@ -1,0 +1,22 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "✈️  Running Pre-Flight Checks (The Hangar Rule)..."
+
+# 1. Strict Type Check (Fails on warnings)
+npm run check
+
+# 2. Scan for TODOs in src/
+if grep -rE "TODO|FIXME" ./src; then
+  echo "========================================================"
+  echo "❌ COMMIT BLOCKED: Unresolved TODO/FIXME detected."
+  echo "   Use the Hangar Rule: Fix it or open a Ticket."
+  echo "========================================================"
+  exit 1
+fi
+
+echo "✅ All systems go."
+
+# later
+# npm run check
+# npm run lint

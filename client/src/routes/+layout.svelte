@@ -5,6 +5,14 @@
 
 <svelte:head>
   <title>ForkFlirt - Secure Dating for Nerds</title>
+  <meta http-equiv="content-security-policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: https://raw.githubusercontent.com https://placehold.co;
+    connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://keybase.io https://dns.google;
+    font-src 'self';
+  ">
 </svelte:head>
 
 <div class="min-h-screen bg-base-200">

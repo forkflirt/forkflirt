@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "daisyui": "^5.5.5"
+  },
+  "dependencies": {
+    "typescript": "^5.9.3"
   }
 }
