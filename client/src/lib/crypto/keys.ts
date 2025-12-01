@@ -1,7 +1,8 @@
-import { get, set } from "idb-keyval";
+import { get, set, del } from "idb-keyval";
 
 const PRIVATE_KEY_DB = "forkflirt_priv_key";
 const PUBLIC_KEY_DB = "forkflirt_pub_key";
+const ENCRYPTED_PRIVATE_KEY_DB = "forkflirt_encrypted_priv_key";
 
 // --- Types ---
 
@@ -10,13 +11,79 @@ export interface KeyPair {
   privateKey: CryptoKey;
 }
 
+export interface EncryptedPrivateKey {
+  algorithm: "AES-GCM";
+  salt: Uint8Array;
+  iv: Uint8Array;
+  wrappedKey: ArrayBuffer;
+  version: 1;
+}
+
+export interface PassphraseValidation {
+  valid: boolean;
+  reason?: string;
+}
+
+// --- Passphrase Validation ---
+
+export function validatePassphrase(passphrase: string): PassphraseValidation {
+  const words = passphrase.trim().split(/[\s\-\.]+/);
+  const hasLetters = /[a-zA-Z]/.test(passphrase);
+  const hasNumbers = /\d/.test(passphrase);
+  const hasSymbols = /[^\w\s]/.test(passphrase);
+  
+  if (words.length < 4) return { valid: false, reason: "Must be at least 4 words" };
+  if (passphrase.length < 12) return { valid: false, reason: "Must be at least 12 characters" };
+  
+  const complexityCount = [hasLetters, hasNumbers, hasSymbols].filter(Boolean).length;
+  if (complexityCount < 2) return { valid: false, reason: "Must include at least 2 of: letters, numbers, symbols" };
+  
+  return { valid: true };
+}
+
+// --- Key Derivation ---
+
+async function deriveEncryptionKey(
+  passphrase: string, 
+  salt: Uint8Array
+): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await window.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(passphrase),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+
+  return window.crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: new Uint8Array(salt), // Ensure proper BufferSource
+      iterations: 600000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["wrapKey", "unwrapKey"]
+  );
+}
+
 // --- Key Generation ---
 
 /**
- * Generates a new RSA-OAEP-2048 Keypair.
- * The Private Key is non-extractable by default for security.
+ * Generates a new RSA-OAEP-2048 Keypair with passphrase protection.
+ * The Private Key is encrypted with AES-GCM using PBKDF2-derived key.
  */
-export async function generateIdentity(): Promise<KeyPair> {
+export async function generateIdentityWithPassphrase(
+  passphrase: string
+): Promise<KeyPair> {
+  const validation = validatePassphrase(passphrase);
+  if (!validation.valid) {
+    throw new Error(validation.reason);
+  }
+
   const keyPair = await window.crypto.subtle.generateKey(
     {
       name: "RSA-OAEP",
@@ -24,29 +91,106 @@ export async function generateIdentity(): Promise<KeyPair> {
       publicExponent: new Uint8Array([1, 0, 1]),
       hash: "SHA-256",
     },
-    true, //  Key can be exported → Risk if malicious code runs; must be true to store in indexedDB tho :/
+    true, // Extractable for wrapping
     ["encrypt", "decrypt"]
   );
 
-  // Store in IndexedDB (Browser handles serialization of CryptoKey objects)
-  await set(PRIVATE_KEY_DB, keyPair.privateKey);
+  // Store public key normally
   await set(PUBLIC_KEY_DB, keyPair.publicKey);
 
+  // Encrypt and store private key
+  const salt = window.crypto.getRandomValues(new Uint8Array(16));
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const encryptionKey = await deriveEncryptionKey(passphrase, salt);
+
+  const wrappedKey = await window.crypto.subtle.wrapKey(
+    "pkcs8",
+    keyPair.privateKey,
+    encryptionKey,
+    { name: "AES-GCM", iv }
+  );
+
+  const encryptedKey: EncryptedPrivateKey = {
+    algorithm: "AES-GCM",
+    salt,
+    iv,
+    wrappedKey,
+    version: 1
+  };
+
+  await set(ENCRYPTED_PRIVATE_KEY_DB, encryptedKey);
   return keyPair;
+}
+
+/**
+ * Legacy function - redirects to passphrase version for backward compatibility.
+ * @deprecated Use generateIdentityWithPassphrase instead.
+ */
+export async function generateIdentity(): Promise<KeyPair> {
+  throw new Error("generateIdentity() is deprecated. Use generateIdentityWithPassphrase() instead.");
 }
 
 /**
  * Checks if an identity already exists in this browser.
  */
 export async function hasIdentity(): Promise<boolean> {
-  const priv = await get(PRIVATE_KEY_DB);
-  return !!priv;
+  const encrypted = await get(ENCRYPTED_PRIVATE_KEY_DB);
+  const legacy = await get(PRIVATE_KEY_DB);
+  return !!(encrypted || legacy);
 }
 
 /**
- * Retrieves the Private Key for decryption.
+ * Checks if passphrase-protected identity exists.
+ */
+export async function hasEncryptedIdentity(): Promise<boolean> {
+  const encrypted = await get(ENCRYPTED_PRIVATE_KEY_DB);
+  return !!encrypted;
+}
+
+/**
+ * Retrieves the Private Key for decryption with passphrase.
+ */
+export async function getPrivateKeyWithPassphrase(
+  passphrase: string
+): Promise<CryptoKey> {
+  const encryptedKey = await get<EncryptedPrivateKey>(
+    ENCRYPTED_PRIVATE_KEY_DB
+  );
+  
+  if (!encryptedKey) {
+    throw new Error("No encrypted private key found");
+  }
+
+  const encryptionKey = await deriveEncryptionKey(
+    passphrase, 
+    encryptedKey.salt
+  );
+
+  try {
+    return await window.crypto.subtle.unwrapKey(
+      "pkcs8",
+      encryptedKey.wrappedKey,
+      encryptionKey,
+      { name: "AES-GCM", iv: new Uint8Array(encryptedKey.iv) },
+      { name: "RSA-OAEP", hash: "SHA-256" },
+      true,
+      ["decrypt"]
+    );
+  } catch (error) {
+    throw new Error("Invalid passphrase or corrupted key");
+  }
+}
+
+/**
+ * Legacy function - redirects to passphrase version.
+ * @deprecated Use getPrivateKeyWithPassphrase instead.
  */
 export async function getPrivateKey(): Promise<CryptoKey | undefined> {
+  const encrypted = await get(ENCRYPTED_PRIVATE_KEY_DB);
+  if (encrypted) {
+    throw new Error("Private key is passphrase-protected. Use getPrivateKeyWithPassphrase() instead.");
+  }
+  
   return await get<CryptoKey>(PRIVATE_KEY_DB);
 }
 
@@ -115,4 +259,72 @@ export async function getFingerprint(key: CryptoKey): Promise<string> {
   // Convert to Hex string
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// --- Key Deletion (Critical for Privacy) ---
+
+/**
+ * Deletes all cryptographic identity from this browser.
+ * This is critical for privacy in dating applications.
+ */
+export async function deleteIdentity(): Promise<void> {
+  try {
+    // Delete from IndexedDB
+    await del(PRIVATE_KEY_DB);
+    await del(PUBLIC_KEY_DB);
+    await del(ENCRYPTED_PRIVATE_KEY_DB);
+    
+    // Clear any session storage
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
+    
+    // Clear any localStorage related to crypto
+    if (typeof localStorage !== 'undefined') {
+      // Remove replay protection data
+      localStorage.removeItem('forkflirt_replay_protection');
+      
+      // Remove any other crypto-related data
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('forkflirt') || key.includes('crypto') || key.includes('key'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
+    
+    console.log('✅ All cryptographic identity data deleted successfully');
+  } catch (error) {
+    console.error('❌ Failed to delete identity:', error);
+    throw new Error('Failed to securely delete identity data');
+  }
+}
+
+/**
+ * Checks if any identity data remains in storage.
+ * Useful for verifying deletion was successful.
+ */
+export async function hasAnyIdentityData(): Promise<boolean> {
+  try {
+    const hasEncrypted = await hasEncryptedIdentity();
+    const hasLegacy = await hasIdentity();
+    
+    // Check localStorage for any remaining data
+    let hasLocalStorageData = false;
+    if (typeof localStorage !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('forkflirt') || key.includes('crypto') || key.includes('key'))) {
+          hasLocalStorageData = true;
+          break;
+        }
+      }
+    }
+    
+    return hasEncrypted || hasLegacy || hasLocalStorageData;
+  } catch {
+    return false;
+  }
 }
