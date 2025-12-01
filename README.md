@@ -57,12 +57,12 @@ This repository contains both the official client and the protocol standards.
 
 ForkFlirt is a strictly defined protocol. If you are building a custom client (CLI, Mobile, Vim Plugin), start here:
 
-- **[01-Topology](./protocol/docs/01-ARCHITECTURE.md):** How we use GitHub as a serverless relay.
-- **[02-Schema v1.1](./protocol/docs/02-SCHEMA.md):** The JSON standard (Bio, Vices, Survey Data).
-- **[03-Cryptography](./protocol/docs/03-SECURITY.md):** The RSA-OAEP/AES-GCM Handshake spec.
-- **[04-The Algorithm](./protocol/docs/04-MATCHING.md):** How the Geometric Mean compatibility score is calculated.
-- **[05-Moderation](./protocol/docs/05-MODERATION.md):** The `.forkflirtignore` blocklist standard.
-- **[06-Verification](./protocol/docs/06-VERIFICATION.md):** Identity proofs via DNS TXT records and Keybase.
+- **[01 - Architecture](./protocol/docs/01-ARCHITECTURE.md):** How we use GitHub as a serverless relay.
+- **[02 - Schema](./protocol/docs/02-SCHEMA.md):** The JSON standard (Bio, Vices, Survey Data).
+- **[03 - Security](./protocol/docs/03-SECURITY.md):** The RSA-OAEP/AES-GCM Handshake spec.
+- **[04 - The Algorithm](./protocol/docs/04-MATCHING.md):** How the Geometric Mean compatibility score is calculated.
+- **[05 - Moderation](./protocol/docs/05-MODERATION.md):** The `.forkflirtignore` blocklist standard.
+- **[06 - Verification](./protocol/docs/06-VERIFICATION.md):** Identity proofs via DNS TXT records and Keybase.
 
 ### Core Concepts
 
