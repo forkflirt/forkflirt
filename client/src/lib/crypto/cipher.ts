@@ -90,10 +90,19 @@ export interface DecryptedMessage {
 /**
  * Decrypts a message block using the user's Private Key.
  */
+
+const DECRYPT_LIMIT = 100; // Max attempts per minute
+let decryptAttempts = 0;
+
 export async function decryptMessage(
   encryptedBlock: string,
   myPrivateKey: CryptoKey
 ): Promise<DecryptedMessage> {
+  // this prevents DoS from issues spam with garbage encrypted messages; revisit
+  if (decryptAttempts++ > DECRYPT_LIMIT) {
+    throw new Error("Too many decryption attempts, please refresh");
+  }
+
   // 1. Parse Block
   const lines = encryptedBlock.split("\n").map((l) => l.trim());
 

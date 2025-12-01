@@ -1,153 +1,145 @@
 import type { Profile } from "../schemas/validator";
 
-// --- Configuration ---
-
-const MINIMUM_OVERLAP = 3; // Profiles must share at least 3 questions to be scored
-
-const POINTS: Record<string, number> = {
-  mandatory: 250,
-  very_important: 50,
-  somewhat_important: 10,
-  little_importance: 1,
-  irrelevant: 0,
-};
-
 // --- Types ---
 
-export interface MatchResult {
-  percent: number; // 0 to 100
-  overlap: number; // Number of common questions answered
-  isDealbreaker: boolean; // True if a mandatory requirement was failed
-  insufficientData: boolean; // True if overlap < MINIMUM_OVERLAP
+export interface BlockRules {
+  blockedUsers: Set<string>; // block:username
+  filteredTags: Set<string>; // filter:tag:crypto
+  filteredKeywords: string[]; // filter:keyword:nft
+  imports: string[]; // import:url
 }
 
-interface SurveyMap {
-  [questionId: string]: {
-    answer: string;
-    acceptable: Set<string>;
-    importance: string;
+// --- Parsing Logic ---
+
+/**
+ * Parses a raw .forkflirtignore string into a structured Rules object.
+ */
+export function parseIgnoreFile(text: string): BlockRules {
+  const rules: BlockRules = {
+    blockedUsers: new Set(),
+    filteredTags: new Set(),
+    filteredKeywords: [],
+    imports: [],
   };
-}
 
-// --- Helpers ---
+  const lines = text.split("\n");
 
-/**
- * Converts the array into a Map for O(1) lookups during comparison.
- */
-function mapSurvey(profile: Profile): SurveyMap {
-  const map: SurveyMap = {};
-  if (!profile.survey) return map;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
 
-  for (const q of profile.survey) {
-    map[q.question_id] = {
-      answer: q.answer_choice,
-      acceptable: new Set(q.acceptable_answers),
-      importance: q.importance,
-    };
+    if (trimmed.startsWith("block:")) {
+      const user = trimmed.replace("block:", "").trim().toLowerCase();
+      if (user) rules.blockedUsers.add(user);
+    } else if (trimmed.startsWith("filter:tag:")) {
+      const tag = trimmed.replace("filter:tag:", "").trim().toLowerCase();
+      if (tag) rules.filteredTags.add(tag);
+    } else if (trimmed.startsWith("filter:keyword:")) {
+      const kw = trimmed.replace("filter:keyword:", "").trim().toLowerCase();
+      // Remove quotes if present
+      const cleanKw = kw.replace(/^"|"$/g, "");
+      if (cleanKw) rules.filteredKeywords.push(cleanKw);
+    } else if (trimmed.startsWith("import:")) {
+      const url = trimmed.replace("import:", "").trim();
+      if (url.startsWith("http")) rules.imports.push(url);
+    }
   }
-  return map;
+
+  return rules;
 }
 
+// --- Resolution (Imports) ---
+
 /**
- * Calculates satisfaction score in one direction (Source judging Target).
+ * Recursively fetches imported blocklists.
+ * Max depth = 2 to prevent infinite loops/hanging.
  */
-function calculateDirectionalScore(sourceMap: SurveyMap, targetMap: SurveyMap) {
-  let pointsEarned = 0;
-  let pointsPossible = 0;
-  let dealbreakerFound = false;
-  let overlappingQuestions = 0;
+export async function resolveRules(initialText: string): Promise<BlockRules> {
+  // 1. Parse local file
+  const rootRules = parseIgnoreFile(initialText);
 
-  // Iterate over questions the SOURCE cares about
-  for (const [qId, sourceData] of Object.entries(sourceMap)) {
-    const targetData = targetMap[qId];
+  // 2. Resolve imports
+  // We combine everything into the root ruleset
+  await processImports(rootRules, 0);
 
-    // If target hasn't answered this question, skip it
-    if (!targetData) continue;
+  return rootRules;
+}
 
-    overlappingQuestions++;
+async function processImports(rules: BlockRules, depth: number) {
+  if (depth > 2 || rules.imports.length === 0) return;
 
-    const weight = POINTS[sourceData.importance] || 0;
+  const currentImports = [...rules.imports];
+  rules.imports = []; // Clear queue to avoid re-processing
 
-    // Irrelevant questions don't affect the denominator
-    if (weight === 0) continue;
+  const fetchPromises = currentImports.map(async (url) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return await res.text();
+    } catch (e) {
+      console.warn(`Failed to import blocklist: ${url}`, e);
+      return null;
+    }
+  });
 
-    pointsPossible += weight;
+  const results = await Promise.all(fetchPromises);
 
-    // Logic: Is target's answer in source's acceptable list?
-    const isAcceptable = sourceData.acceptable.has(targetData.answer);
+  for (const text of results) {
+    if (!text) continue;
+    const importedRules = parseIgnoreFile(text);
 
-    if (isAcceptable) {
-      pointsEarned += weight;
-    } else {
-      // It's a miss. Check if it was mandatory.
-      if (sourceData.importance === "mandatory") {
-        dealbreakerFound = true;
+    // Merge
+    importedRules.blockedUsers.forEach((u) => rules.blockedUsers.add(u));
+    importedRules.filteredTags.forEach((t) => rules.filteredTags.add(t));
+    rules.filteredKeywords.push(...importedRules.filteredKeywords);
+
+    // Recurse (if new imports found)
+    if (importedRules.imports.length > 0) {
+      // Add to queue for next depth pass, technically we could recurse here but
+      // flattening the logic in one object is easier
+      await processImports(importedRules, depth + 1);
+
+      // Merge grandchildren
+      importedRules.blockedUsers.forEach((u) => rules.blockedUsers.add(u));
+      importedRules.filteredTags.forEach((t) => rules.filteredTags.add(t));
+      rules.filteredKeywords.push(...importedRules.filteredKeywords);
+    }
+  }
+}
+
+// --- Enforcement ---
+
+/**
+ * Checks if a profile should be hidden based on the rules.
+ */
+export function isBlocked(
+  candidateProfile: Profile,
+  candidateUsername: string,
+  rules: BlockRules
+): boolean {
+  // 1. User Block
+  if (rules.blockedUsers.has(candidateUsername.toLowerCase())) {
+    return true;
+  }
+
+  // 2. Tag Filter
+  if (candidateProfile.content.tags) {
+    for (const tag of candidateProfile.content.tags) {
+      if (rules.filteredTags.has(tag.toLowerCase())) {
+        return true;
       }
     }
   }
 
-  // Prevent divide by zero
-  const rawScore = pointsPossible === 0 ? 0 : pointsEarned / pointsPossible;
-
-  return {
-    rawScore, // 0.0 to 1.0
-    overlappingQuestions,
-    dealbreakerFound,
-  };
-}
-
-// --- Main Algorithm ---
-
-export function calculateMatch(
-  viewer: Profile,
-  candidate: Profile
-): MatchResult {
-  const viewerMap = mapSurvey(viewer);
-  const candidateMap = mapSurvey(candidate);
-
-  // 1. Calculate A -> B
-  const scoreA = calculateDirectionalScore(viewerMap, candidateMap);
-
-  // 2. Calculate B -> A
-  const scoreB = calculateDirectionalScore(candidateMap, viewerMap);
-
-  // 3. Check Constraints
-
-  // Use the lower overlap count of the two (should be identical, but safe to be conservative)
-  const overlap = Math.min(
-    scoreA.overlappingQuestions,
-    scoreB.overlappingQuestions
-  );
-
-  if (overlap < MINIMUM_OVERLAP) {
-    return {
-      percent: 0,
-      overlap,
-      isDealbreaker: false,
-      insufficientData: true,
-    };
+  // 3. Keyword Filter (Bio check)
+  if (candidateProfile.content.bio) {
+    const bioLower = candidateProfile.content.bio.toLowerCase();
+    for (const kw of rules.filteredKeywords) {
+      if (bioLower.includes(kw)) {
+        return true;
+      }
+    }
   }
 
-  if (scoreA.dealbreakerFound || scoreB.dealbreakerFound) {
-    return {
-      percent: 0,
-      overlap,
-      isDealbreaker: true,
-      insufficientData: false,
-    };
-  }
-
-  // 4. Geometric Mean
-  // Math.sqrt(SatisfationA * SatisfactionB)
-  const geometricMean = Math.sqrt(scoreA.rawScore * scoreB.rawScore);
-
-  // Round to integer percentage
-  const percent = Math.floor(geometricMean * 100);
-
-  return {
-    percent,
-    overlap,
-    isDealbreaker: false,
-    insufficientData: false,
-  };
+  return false;
 }

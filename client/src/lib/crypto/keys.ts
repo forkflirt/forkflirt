@@ -24,7 +24,7 @@ export async function generateIdentity(): Promise<KeyPair> {
       publicExponent: new Uint8Array([1, 0, 1]),
       hash: "SHA-256",
     },
-    false, // extractable (Private key cannot be exported via JS later, only used)
+    true, //  Key can be exported → Risk if malicious code runs; must be true to store in indexedDB tho :/
     ["encrypt", "decrypt"]
   );
 
