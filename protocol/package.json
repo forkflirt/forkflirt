@@ -1,0 +1,32 @@
+{
+  "name": "forkflirt-protocol",
+  "version": "1.0.0",
+  "description": "The decentralized, git-based dating protocol for nerds.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:schema": "node scripts/validate.js",
+    "lint": "eslint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forkflirt/protocol.git"
+  },
+  "keywords": [
+    "dating",
+    "protocol",
+    "p2p",
+    "decentralized",
+    "github"
+  ],
+  "author": "Plug Puppy LLC",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/forkflirt/protocol/issues"
+  },
+  "homepage": "https://github.com/forkflirt/protocol#readme",
+  "devDependencies": {
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1"
+  }
+}

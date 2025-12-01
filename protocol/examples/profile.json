@@ -1,0 +1,105 @@
+{
+  "$schema": "../schemas/profile.schema.json",
+  "meta": {
+    "generated_by": "manual",
+    "updated_at": "2025-12-01T16:20:00Z",
+    "version": "1.1.0"
+  },
+  "identity": {
+    "display_name": "Devon",
+    "pronouns": "they/them",
+    "age": 29,
+    "gender": "Non-binary",
+    "orientation": "Pansexual",
+    "location": {
+      "city": "Seattle",
+      "country_code": "US",
+      "geo_hash": "c23nb"
+    }
+  },
+  "details": {
+    "height_cm": 175,
+    "body_type": "average",
+    "job_title": "Systems Engineer",
+    "education": "Masters in CS",
+    "vices": {
+      "smoking": "never",
+      "drinking": "socially",
+      "drugs": "never"
+    },
+    "lifestyle": {
+      "diet": "vegetarian",
+      "kids": "does_not_want",
+      "pets": ["cat", "dog"]
+    }
+  },
+  "content": {
+    "bio": "Building distributed systems by day, painting miniatures by night. \n\nI'm looking for someone who can appreciate a clean commit history and a messy bookshelf. I spend my weekends hiking in the Cascades or debugging my 3D printer.",
+    "essays": [
+      {
+        "prompt": "The most private thing I'm willing to admit",
+        "answer": "I sometimes edit files directly on the server using nano."
+      },
+      {
+        "prompt": "I spend a lot of time thinking about",
+        "answer": "Why we haven't standardized on a universal swaying protocol for standing desks."
+      }
+    ],
+    "images": [
+      {
+        "src": "./assets/profile.jpg",
+        "alt": "Me holding my cat, Sudo",
+        "caption": "Sudo is the one with the whiskers"
+      },
+      {
+        "src": "./assets/hiking.jpg",
+        "alt": "Rainier view",
+        "caption": "Summer 2024"
+      }
+    ],
+    "tags": ["rust", "hiking", "warhammer-40k", "scifi", "board-games"],
+    "links": [
+      {
+        "label": "My Blog",
+        "url": "https://devon-codes.example.com"
+      }
+    ]
+  },
+  "survey": [
+    {
+      "question_id": "q_tech_01",
+      "description": "Tabs or Spaces?",
+      "answer_choice": "1",
+      "importance": "mandatory",
+      "acceptable_answers": ["1"]
+    },
+    {
+      "question_id": "q_social_01",
+      "description": "Night Out or Night In?",
+      "answer_choice": "1",
+      "importance": "somewhat_important",
+      "acceptable_answers": ["1", "2"]
+    },
+    {
+      "question_id": "q_ethics_01",
+      "description": "Is piracy okay?",
+      "answer_choice": "1",
+      "importance": "very_important",
+      "acceptable_answers": ["0", "1"]
+    }
+  ],
+  "security": {
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    "fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "key_type": "RSA-OAEP-2048"
+  },
+  "preferences": {
+    "looking_for": ["relationship", "co-op partner"],
+    "age_range": [26, 35],
+    "distance_km": 50,
+    "match_filter": {
+      "exclude_tags": ["crypto", "conservative"],
+      "include_tags": ["scifi", "tech"]
+    }
+  }
+}

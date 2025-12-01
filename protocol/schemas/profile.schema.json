@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ForkFlirt Profile v1.1",
+  "type": "object",
+  "required": ["identity", "security", "content"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "generated_by": { "type": "string" },
+        "updated_at": { "type": "string", "format": "date-time" },
+        "version": { "type": "string" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "required": ["display_name", "age", "location"],
+      "properties": {
+        "display_name": { "type": "string", "maxLength": 50 },
+        "pronouns": { "type": "string" },
+        "age": { "type": "integer", "minimum": 18 },
+        "gender": { "type": "string" },
+        "orientation": { "type": "string" },
+        "location": {
+          "type": "object",
+          "required": ["city", "country_code"],
+          "properties": {
+            "city": { "type": "string" },
+            "country_code": { "type": "string", "pattern": "^[A-Z]{2}$" },
+            "geo_hash": { "type": "string" }
+          }
+        }
+      }
+    },
+    "details": {
+      "type": "object",
+      "description": "Standard dating site matrices",
+      "properties": {
+        "height_cm": { "type": "integer" },
+        "body_type": { "type": "string" },
+        "vices": {
+          "type": "object",
+          "properties": {
+            "smoking": {
+              "enum": ["never", "socially", "regularly", "trying_to_quit"]
+            },
+            "drinking": { "enum": ["never", "socially", "regularly"] },
+            "drugs": { "enum": ["never", "socially", "regularly"] }
+          }
+        },
+        "lifestyle": {
+          "type": "object",
+          "properties": {
+            "kids": {
+              "enum": [
+                "has_kids",
+                "wants_kids",
+                "has_and_wants_more",
+                "does_not_want",
+                "unsure"
+              ]
+            },
+            "pets": { "type": "array", "items": { "type": "string" } },
+            "diet": { "type": "string" }
+          }
+        },
+        "education": { "type": "string" },
+        "job_title": { "type": "string" }
+      }
+    },
+    "content": {
+      "type": "object",
+      "properties": {
+        "bio": { "type": "string", "maxLength": 2000 },
+        "essays": {
+          "type": "array",
+          "description": "OkC style open-ended prompts",
+          "items": {
+            "type": "object",
+            "required": ["prompt", "answer"],
+            "properties": {
+              "prompt": { "type": "string" },
+              "answer": { "type": "string", "maxLength": 5000 }
+            }
+          }
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["src"],
+            "properties": {
+              "src": { "type": "string" },
+              "alt": { "type": "string" },
+              "caption": { "type": "string" }
+            }
+          }
+        },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "survey": {
+      "type": "array",
+      "description": "The '1000 Questions' logic for algorithm matching",
+      "items": {
+        "type": "object",
+        "required": ["question_id", "answer_choice"],
+        "properties": {
+          "question_id": { "type": "string" },
+          "answer_choice": { "type": "string" },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "mandatory",
+              "very_important",
+              "somewhat_important",
+              "little_importance",
+              "irrelevant"
+            ]
+          },
+          "acceptable_answers": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": ["public_key"],
+      "properties": {
+        "public_key": { "type": "string" },
+        "fingerprint": { "type": "string" },
+        "key_type": { "type": "string" }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "properties": {
+        "looking_for": { "type": "array", "items": { "type": "string" } },
+        "age_range": { "type": "array", "items": { "type": "integer" } },
+        "distance_km": { "type": "integer" }
+      }
+    }
+  }
+}
