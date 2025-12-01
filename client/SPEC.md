@@ -1,8 +1,8 @@
-# ForkFlirt Client Specification v1.2 (Monorepo)
+# ForkFlirt Client Specification v1.3 (Monorepo)
 
 **Role:** You are a Senior Frontend Architect building a "Serverless" Dating App.
 **Stack:** SvelteKit (Static Adapter), TailwindCSS, Octokit, WebCrypto API, Zod.
-**Context:** This is a Monorepo. The App source is in `/client`. User Data is in `/profile`. Protocol Docs are in `/protocol`.
+**Context:** This is a Monorepo. The App source is in `/client`. User Data is in `/profile`.
 
 ## 1. Core Architecture
 
@@ -28,7 +28,7 @@ The generated SvelteKit project must follow this structure inside the `/client` 
 │   ├── logic/
 │   │   ├── matching.ts     # The Compatibility Algorithm (Geometric Mean)
 │   │   ├── moderation.ts   # .forkflirtignore parser & blocklist logic
-│   │   └── verification.ts # "Green Squares" / Activity Score logic
+│   │   └── verification.ts # DNS & Keybase identity checks
 │   ├── schemas/
 │   │   └── profile.ts      # Zod definition matching Schema v1.1
 │   ├── stores/
@@ -40,7 +40,7 @@ The generated SvelteKit project must follow this structure inside the `/client` 
 │       └── swipe/          # The Card Stack UI
 ├── routes/
 │   ├── +layout.svelte      # Main Shell
-│   ├── +page.svelte        # Landing
+│   ├── +page.svelte        # Landing / Login / Host Profile View
 │   ├── setup/              # Wizard (Keys -> Details -> Survey -> Commit)
 │   ├── app/
 │   │   ├── swipe/          # Main Feed
@@ -61,9 +61,26 @@ Since the app is hosted via GitHub Pages, it must access data via **HTTP (Raw)**
 
 ## 4. Key Feature Requirements
 
-### 4.1 The "Wizard" (Onboarding)
+### 4.1 Landing Page & Mode Detection
 
-When a user authenticates, check for `profile/profile.json`. If missing, launch the Wizard.
+The root route (`/`) must behave differently based on Auth state.
+
+1.  **Unauthenticated (Public View):**
+    - Fetch `profile/profile.json` relative to the current URL.
+    - Render the Host's Profile Card (ReadOnly).
+    - Show a "Login / Connect" button.
+2.  **Authenticated (Guest):**
+    - User is logged in, but `login !== repo_owner`.
+    - Show Host's Profile Card.
+    - Enable "Message" button (if keys exist).
+    - Show "Go to Feed" button.
+3.  **Authenticated (Owner):**
+    - User is logged in AND `login === repo_owner`.
+    - Redirect to `/app/swipe` (or `/setup` if profile is missing).
+
+### 4.2 The "Wizard" (Onboarding)
+
+Triggered ONLY if **Authenticated (Owner)** and `profile.json` is missing.
 
 - **Step 1: Identity:** Generate RSA-OAEP-2048 Keypair. Store Private Key in `IndexedDB`.
 - **Step 2: Vitals:** Name, Age (18+), Location (City/Country).
@@ -74,7 +91,7 @@ When a user authenticates, check for `profile/profile.json`. If missing, launch 
   2.  Upload images to `profile/assets/`.
   3.  Commit both to the `main` branch using Octokit.
 
-### 4.2 The Matching Algorithm (`lib/logic/matching.ts`)
+### 4.3 The Matching Algorithm (`lib/logic/matching.ts`)
 
 The matching logic is bidirectional.
 
@@ -87,7 +104,7 @@ The matching logic is bidirectional.
     - **Final Match %:** The Geometric Mean: $\sqrt{Score_{AB} \times Score_{BA}}$.
 4.  **Sorting:** Feed must be sorted by Final Match %.
 
-### 4.3 Decentralized Moderation (`lib/logic/moderation.ts`)
+### 4.4 Decentralized Moderation (`lib/logic/moderation.ts`)
 
 Before rendering the feed, the client must build a "Block Ruleset".
 
@@ -96,21 +113,14 @@ Before rendering the feed, the client must build a "Block Ruleset".
 3.  **Imports:** Recursively fetch `import:` URLs (max depth 2) to load shared blocklists.
 4.  **Apply:** Remove any candidate from the feed that matches a Rule.
 
-### 4.4 Verification System (`lib/logic/verification.ts`)
+### 4.5 Verification System (`lib/logic/verification.ts`)
 
 Display "Trust Signals" on the profile card.
 
-1.  **DNS Verification:**
-    - Check for a TXT record on the user's custom domain (if provided in `links`).
-    - Query: `https://cloudflare-dns.com/dns-query?name={domain}&type=TXT`
-    - Look for string: `forkflirt-verify={github_username}`.
-2.  **Keybase Verification:**
-    - If `security.keybase_user` is present in profile (or inferred from links), fetch Keybase proofs.
-    - Query: `https://keybase.io/_/api/1.0/user/lookup.json`
-    - Check: Does `proofs_summary.github` match the current Repo Owner?
-    - Action: If matched, display "Verified" badge and list other proofs (Twitter, Reddit, etc.).
+1.  **DNS Verification:** Check for TXT record `forkflirt-verify={username}` via Google Public DNS JSON API.
+2.  **Keybase Verification:** Fetch Keybase user; check if they have a `proof_type: github` that matches the repo owner. If yes, display all their other proofs.
 
-### 4.5 Encrypted Messaging
+### 4.6 Encrypted Messaging
 
 - **Send:**
   1.  Fetch Recipient's `profile/profile.json`.
@@ -119,11 +129,10 @@ Display "Trust Signals" on the profile card.
   4.  Encrypt Message (AES) + Encrypt AES Key (RSA).
   5.  Post as GitHub Issue: `ForkFlirt Handshake: [Hash]`.
 - **Receive:**
-
   1.  Poll Issues with `ForkFlirt Handshake`.
   2.  Decrypt using Private Key from `IndexedDB`.
 
-  ### 4.6 Advanced Security (PGP Check)
+### 4.7 Advanced Security (PGP Check)
 
 If `profile.json` contains `security.signature`:
 
