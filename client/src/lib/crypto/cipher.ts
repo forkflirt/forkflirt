@@ -59,6 +59,15 @@ function recordDecryptAttempt(): void {
   decryptAttempts.push(Date.now());
 }
 
+function constantTimeStringCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 // --- Enhanced Replay Protection Store ---
 
 import { get, set, del } from 'idb-keyval';
@@ -128,8 +137,8 @@ export class SecureReplayProtectionStore {
   async isMessageSeen(messageId: string, senderId: string): Promise<boolean> {
     const messages = await this.getSeenMessages();
     return messages.some(msg =>
-      msg.message_id === messageId &&
-      msg.sender_id === senderId &&
+      constantTimeStringCompare(msg.message_id, messageId) &&
+      constantTimeStringCompare(msg.sender_id, senderId) &&
       this.isMessageValid(msg)
     );
   }
@@ -422,55 +431,52 @@ export async function decryptMessage(
 
     const text = new TextDecoder().decode(decryptedBytes);
     
-    // Verify signature if present
+    // Verify signature - REQUIRED for all messages
+    if (!signatureLine) {
+      throw createSecurityError("Message missing required signature - possible forgery");
+    }
+
     let verified = false;
-    if (signatureLine) {
-      try {
-        const b64Signature = signatureLine.replace("Signature: ", "");
-        const signature = base64ToArrayBuffer(b64Signature);
-        
-        // Fetch sender's profile to get their public key
-        const { fetchRawProfile } = await import('../api/github.js');
-        const senderProfile = await fetchRawProfile(metadata.sender_id, 'forkflirt');
-        
-        if (!senderProfile || !senderProfile.security?.public_key) {
-          throw new Error("Sender's public key not found");
-        }
-        
-        // Import sender's public key
-        const { importPublicKeyFromPEM } = await import('./keys.js');
-        const senderPublicKey = await importPublicKeyFromPEM(senderProfile.security.public_key);
-        
-        // Reconstruct the signed message data
-        const messageData = [
-          metadata.message_id,
-          metadata.timestamp.toString(),
-          metadata.sender_id,
-          arrayBufferToBase64(encryptedPayload)
-        ].join('|');
-        
-        // Verify the signature
-        const enc = new TextEncoder();
-        const isValid = await window.crypto.subtle.verify(
-          { name: "RSA-PSS", saltLength: 32 },
-          senderPublicKey,
-          signature,
-          enc.encode(messageData)
-        );
-        
-        verified = isValid;
-        
-        if (!verified) {
-          throw new Error("Signature verification failed - message may be tampered");
-        }
-      } catch (err) {
-        console.warn("Signature verification failed:", err);
-        verified = false;
+    try {
+      const b64Signature = signatureLine.replace("Signature: ", "");
+      const signature = base64ToArrayBuffer(b64Signature);
+
+      // Fetch sender's profile to get their public key
+      const { fetchRawProfile } = await import('../api/github.js');
+      const senderProfile = await fetchRawProfile(metadata.sender_id, 'forkflirt');
+
+      if (!senderProfile || !senderProfile.security?.public_key) {
+        throw createSecurityError("Sender's public key not found");
       }
-    } else {
-      // No signature present - this is suspicious for encrypted messages
-      console.warn("Message received without signature");
-      verified = false;
+
+      // Import sender's public key
+      const { importPublicKeyFromPEM } = await import('./keys.js');
+      const senderPublicKey = await importPublicKeyFromPEM(senderProfile.security.public_key);
+
+      // Reconstruct the signed message data
+      const messageData = [
+        metadata.message_id,
+        metadata.timestamp.toString(),
+        metadata.sender_id,
+        arrayBufferToBase64(encryptedPayload)
+      ].join('|');
+
+      // Verify the signature
+      const enc = new TextEncoder();
+      const isValid = await window.crypto.subtle.verify(
+        { name: "RSA-PSS", saltLength: 32 },
+        senderPublicKey,
+        signature,
+        enc.encode(messageData)
+      );
+
+      verified = isValid;
+
+      if (!verified) {
+        throw createSecurityError("Signature verification failed - message tampered or forged");
+      }
+    } catch (err) {
+      throw createSecurityError("Message signature verification failed", err);
     }
     
     // Mark message as seen

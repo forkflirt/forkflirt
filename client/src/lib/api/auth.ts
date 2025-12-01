@@ -62,11 +62,137 @@ async function incrementRateLimit(): Promise<void> {
   await setRateLimitData(data);
 }
 
-// Add CAPTCHA integration placeholder
+// CAPTCHA Implementation
+interface CaptchaChallenge {
+  question: string;
+  answer: number;
+  timestamp: number;
+}
+
+const CAPTCHA_KEY = 'forkflirt_captcha_challenge';
+const CAPTCHA_ATTEMPTS_KEY = 'forkflirt_captcha_attempts';
+const MAX_CAPTCHA_ATTEMPTS = 3;
+const CAPTCHA_WINDOW = 5 * 60 * 1000; // 5 minutes
+
 export async function shouldShowCaptcha(): Promise<boolean> {
   // Show CAPTCHA after 2 failed attempts
   const data = await getRateLimitData();
   return data.attempts >= 2;
+}
+
+export function generateCaptcha(): CaptchaChallenge {
+  const operations = ['+', '-', '*'];
+  const op = operations[Math.floor(Math.random() * operations.length)];
+  const a = Math.floor(Math.random() * 20) + 1;
+  const b = Math.floor(Math.random() * 20) + 1;
+
+  let answer: number;
+  let question: string;
+
+  switch (op) {
+    case '+':
+      answer = a + b;
+      question = `What is ${a} + ${b}?`;
+      break;
+    case '-':
+      answer = a - b;
+      question = `What is ${a} - ${b}?`;
+      break;
+    case '*':
+      answer = a * b;
+      question = `What is ${a} × ${b}?`;
+      break;
+    default:
+      answer = a + b;
+      question = `What is ${a} + ${b}?`;
+  }
+
+  return {
+    question,
+    answer,
+    timestamp: Date.now()
+  };
+}
+
+export function storeCaptchaChallenge(challenge: CaptchaChallenge): void {
+  sessionStorage.setItem(CAPTCHA_KEY, JSON.stringify(challenge));
+}
+
+export function getCaptchaChallenge(): CaptchaChallenge | null {
+  const stored = sessionStorage.getItem(CAPTCHA_KEY);
+  if (!stored) return null;
+
+  const challenge = JSON.parse(stored) as CaptchaChallenge;
+
+  // Challenges expire after 5 minutes
+  if (Date.now() - challenge.timestamp > 5 * 60 * 1000) {
+    sessionStorage.removeItem(CAPTCHA_KEY);
+    return null;
+  }
+
+  return challenge;
+}
+
+export function verifyCaptcha(userAnswer: string): boolean {
+  const challenge = getCaptchaChallenge();
+  if (!challenge) return false;
+
+  // Check CAPTCHA attempt rate limiting
+  const attemptData = getCaptchaAttemptData();
+  if (attemptData.attempts >= MAX_CAPTCHA_ATTEMPTS &&
+      Date.now() - attemptData.windowStart < CAPTCHA_WINDOW) {
+    return false; // Rate limited
+  }
+
+  const isValid = parseInt(userAnswer) === challenge.answer;
+
+  if (isValid) {
+    sessionStorage.removeItem(CAPTCHA_KEY);
+    clearCaptchaAttempts(); // Reset on success
+  } else {
+    incrementCaptchaAttempts(); // Count failed attempts
+  }
+
+  return isValid;
+}
+
+interface CaptchaAttemptData {
+  attempts: number;
+  windowStart: number;
+}
+
+export function getCaptchaAttemptData(): CaptchaAttemptData {
+  const stored = sessionStorage.getItem(CAPTCHA_ATTEMPTS_KEY);
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  return { attempts: 0, windowStart: Date.now() };
+}
+
+function setCaptchaAttemptData(data: CaptchaAttemptData): void {
+  sessionStorage.setItem(CAPTCHA_ATTEMPTS_KEY, JSON.stringify(data));
+}
+
+function incrementCaptchaAttempts(): void {
+  const data = getCaptchaAttemptData();
+  const now = Date.now();
+
+  // Reset window if expired
+  if (now - data.windowStart > CAPTCHA_WINDOW) {
+    data.attempts = 0;
+    data.windowStart = now;
+  }
+
+  data.attempts++;
+  setCaptchaAttemptData(data);
+}
+
+function clearCaptchaAttempts(): void {
+  sessionStorage.removeItem(CAPTCHA_ATTEMPTS_KEY);
+}
+
+export function clearCaptcha(): void {
+  sessionStorage.removeItem(CAPTCHA_KEY);
 }
 
 // --- Enhanced CSRF Protection ---
@@ -166,8 +292,9 @@ export async function restoreSession(): Promise<AuthUser | null> {
  * Validates a PAT and establishes a session with CSRF protection.
  */
 export async function loginWithToken(
-  token: string, 
+  token: string,
   csrfToken?: string,
+  captchaAnswer?: string,
   source?: TokenSource
 ): Promise<AuthUser> {
   // Detect token source if not provided
@@ -197,8 +324,9 @@ export async function loginWithToken(
 
   // Check if CAPTCHA should be shown
   if (await shouldShowCaptcha()) {
-    // TODO: Implement actual CAPTCHA verification
-    console.warn("CAPTCHA would be shown here - implement CAPTCHA integration");
+    if (!captchaAnswer || !verifyCaptcha(captchaAnswer)) {
+      throw new Error("CAPTCHA verification required. Please refresh and complete the CAPTCHA challenge.");
+    }
   }
   
   // Increment rate limit counter

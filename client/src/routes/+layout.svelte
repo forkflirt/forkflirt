@@ -7,11 +7,15 @@
   <title>ForkFlirt - Secure Dating for Nerds</title>
   <meta http-equiv="content-security-policy" content="
     default-src 'self';
-    script-src 'self' 'unsafe-inline';
-    style-src 'self' 'unsafe-inline';
+    script-src 'self';
+    style-src 'self';
     img-src 'self' data: https://raw.githubusercontent.com https://placehold.co;
     connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://keybase.io https://dns.google;
     font-src 'self';
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
   ">
 </svelte:head>
 

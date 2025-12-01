@@ -13,7 +13,33 @@ const SANITIZATION_CONFIG = {
 
 function sanitizeUserInput(input: string): string {
   if (typeof input !== 'string') return input;
-  return DOMPurify.sanitize(input, SANITIZATION_CONFIG);
+  const sanitized = DOMPurify.sanitize(input, SANITIZATION_CONFIG);
+  return sanitizeUrls(sanitized);
+}
+
+function sanitizeUrls(text: string): string {
+  const urlRegex = /https?:\/\/[^\s]+/g;
+  return text.replace(urlRegex, (url) => {
+    try {
+      const parsed = new URL(url);
+      // Only allow safe domains
+      const allowed = ['github.com', 'twitter.com', 'linkedin.com', 'mastodon.social', 'bluesky.app'];
+      if (allowed.some(domain => parsed.hostname === domain || parsed.hostname.endsWith('.' + domain))) {
+        return sanitizeQueryParams(url);
+      }
+      return '[blocked URL]';
+    } catch {
+      return '[invalid URL]';
+    }
+  });
+}
+
+function sanitizeQueryParams(url: string): string {
+  const parsed = new URL(url);
+  // Remove dangerous query parameters
+  const dangerousParams = ['redirect', 'callback', 'return', 'url', 'token', 'key', 'auth'];
+  dangerousParams.forEach(param => parsed.searchParams.delete(param));
+  return parsed.toString();
 }
 
 function sanitizeProfile(data: any): any {
@@ -46,6 +72,34 @@ function sanitizeProfile(data: any): any {
 
   if (data.identity?.orientation) {
     data.identity.orientation = sanitizeUserInput(data.identity.orientation);
+  }
+
+  // Sanitize social media handles
+  if (data.identity?.social) {
+    if (data.identity.social.keybase) {
+      data.identity.social.keybase = sanitizeUserInput(data.identity.social.keybase);
+    }
+    if (data.identity.social.mastodon) {
+      data.identity.social.mastodon = sanitizeUserInput(data.identity.social.mastodon);
+    }
+    if (data.identity.social.bluesky) {
+      data.identity.social.bluesky = sanitizeUserInput(data.identity.social.bluesky);
+    }
+    if (data.identity.social.twitter) {
+      data.identity.social.twitter = sanitizeUserInput(data.identity.social.twitter);
+    }
+    if (data.identity.social.instagram) {
+      data.identity.social.instagram = sanitizeUserInput(data.identity.social.instagram);
+    }
+    if (data.identity.social.discord) {
+      data.identity.social.discord = sanitizeUserInput(data.identity.social.discord);
+    }
+    if (data.identity.social.tiktok) {
+      data.identity.social.tiktok = sanitizeUserInput(data.identity.social.tiktok);
+    }
+    if (data.identity.social.linkedin) {
+      data.identity.social.linkedin = sanitizeUserInput(data.identity.social.linkedin);
+    }
   }
 
   // Sanitize location fields

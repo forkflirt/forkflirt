@@ -29,6 +29,10 @@ function isValidImageUrl(url: string): boolean {
       return false;
     }
 
+    // Sanitize dangerous query parameters
+    const dangerousParams = ['redirect', 'callback', 'return', 'url', 'token', 'key', 'auth', 'exec', 'cmd'];
+    dangerousParams.forEach(param => parsed.searchParams.delete(param));
+
     return true;
   } catch {
     return false;
