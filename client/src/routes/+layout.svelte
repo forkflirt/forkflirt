@@ -1,5 +1,6 @@
 <script lang="ts">
   import '../app.css';
+  import { base } from '$app/paths';
   import { userStore, logout } from '$lib/stores/user.js';
   import { theme } from '$lib/stores/theme.js';
   import Button from '$lib/components/ui/Button.svelte';
@@ -76,7 +77,7 @@
             />
             <span class="text-sm font-medium">{$userStore.auth.login}</span>
           </div>
-          <Button href="/wizard" variant="ghost" size="sm">
+          <Button href="{base}/wizard" variant="ghost" size="sm">
             Profile
           </Button>
           <!-- Settings dropdown -->
@@ -102,7 +103,7 @@
           </div>
         {:else}
           <ThemeToggle />
-          <Button href="/login" variant="primary" size="sm">
+          <Button href="{base}/login" variant="primary" size="sm">
             Login
           </Button>
         {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { base } from '$app/paths';
   import { profileUpdated } from '$lib/stores/user.js';
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
@@ -185,7 +186,7 @@
           <div class="alert alert-info">
             <span>💡 Store your passphrase safely - it cannot be recovered!</span>
           </div>
-          <Button href="/" variant="primary" size="lg" wide>
+          <Button href="{base}/" variant="primary" size="lg" wide>
             Continue to App
           </Button>
         </div>
@@ -193,7 +194,7 @@
     </Card>
 
     <div class="mt-6 text-center">
-      <Button href="/" variant="ghost" size="sm">
+      <Button href="{base}/" variant="ghost" size="sm">
         ← Back to Home
       </Button>
     </div>
