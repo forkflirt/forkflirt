@@ -1,7 +1,8 @@
 # ForkFlirt Web Client
 
-The official SvelteKit reference implementation for the **ForkFlirt Protocol**.
-This client runs entirely in the browser, using your GitHub Repository as its database.
+Reference implementation of the ForkFlirt Protocol using SvelteKit.
+
+This client runs entirely in the browser, using your GitHub repository as its database.
 
 ## 🏗 Technology Stack
 
@@ -9,7 +10,7 @@ This client runs entirely in the browser, using your GitHub Repository as its da
 - **Styling:** TailwindCSS
 - **GitHub API:** Octokit.js (REST)
 - **Cryptography:** Web Crypto API (RSA-OAEP-2048 / AES-GCM)
-- **State:** LocalStorage (Persisted) + Svelte Stores (Runtime)
+- **State:** IndexedDB (encrypted keys) + Svelte Stores (Runtime)
 
 ## 📂 Project Structure
 
@@ -18,14 +19,15 @@ This project lives inside the `/client` directory of the Monorepo.
 ```text
 /src
 ├── lib/
-│   ├── api/            # Octokit wrappers & Auth logic
-│   ├── crypto/         # Key generation & Encryption primitives
-│   ├── logic/          # PURE PROTOCOL LOGIC
-│   │   ├── matching.ts     # Geometric Mean Compatibility Score
-│   │   ├── moderation.ts   # .forkflirtignore parsing
-│   │   └── verification.ts # DNS & Keybase identity checks
-│   ├── schemas/        # Zod Validators for profile.json
-│   └── stores/         # Svelte stores (User, Feed, Inbox)
+│   ├── api/            # GitHub API wrappers & authentication
+│   ├── crypto/         # Key generation, encryption, signatures
+│   ├── logic/          # Protocol implementation
+│   │   ├── matching.ts     # Compatibility score calculation
+│   │   ├── moderation.ts   # Content filtering & behavioral blocking
+│   │   ├── verification.ts # Identity verification methods
+│   │   └── behavioral-blocking.ts # Anti-abuse protection
+│   ├── schemas/        # Profile validation (AJV)
+│   └── stores/         # Svelte stores (User, authentication)
 └── routes/
     ├── setup/          # The "Wizard" (Profile Creation)
     ├── app/            # The Main Interface
@@ -94,19 +96,35 @@ This client does not use a typical database.
 
 ### 2. Client-Side Matching
 
-There is no server algorithm. The client:
+No server algorithm. The client:
 
-1.  Fetches candidate profiles (`topic:forkflirt-profile`).
-2.  Parses their `survey` data.
-3.  Calculates a **Compatibility Score** locally using the Geometric Mean formula defined in the Protocol.
+1. Fetches candidate profiles (`topic:forkflirt-profile`)
+2. Parses their survey data
+3. Calculates compatibility score using geometric mean formula
+4. Applies behavioral blocking and content filtering
 
 ### 3. Identity Verification
 
-The client enforces the **Nerd Identity** protocol:
+Supports multiple verification methods:
 
-- It performs DNS lookups (DoH) to verify custom domains.
-- It queries the Keybase API to verify social proofs (Twitter/Reddit).
+- DNS TXT records on owned domains
+- Keybase API verification (Twitter, Reddit, Mastodon)
+- Mastodon back-link verification
+- Well-known file verification
 
-### 4. "Serverless" Auth
+### 4. Security Features
 
-We use the **Device Flow** (or direct Personal Access Token entry) to authenticate with GitHub without a proxy server. This ensures the app remains 100% static and cost-free.
+- RSA-OAEP-2048/AES-GCM-256 encryption
+- Mandatory RSA-PSS message signatures
+- PBKDF2 key derivation (600,000 iterations)
+- Key rotation for forward secrecy
+- Rate limiting and replay protection
+- Behavioral analysis for spam prevention
+
+### 5. Authentication
+
+Uses GitHub Personal Access Tokens for API access:
+- CSRF protection for token input
+- Rate limiting on login attempts
+- CAPTCHA challenges after failed attempts
+- Token format validation and scope checking

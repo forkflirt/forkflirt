@@ -1,43 +1,35 @@
-<div align="center">
-  <img src="./header.png" alt="ForkFlirt Banner" width="100%" />
-  
-  <h1>ForkFlirt 💘</h1>
-  
-  <p><strong>The Decentralized, Client-Agnostic Dating Protocol.</strong></p>
-</div>
+# ForkFlirt
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
-[![Stack](https://img.shields.io/badge/Stack-SvelteKit_x_GitHub-orange.svg)](./client)
-[![Status](https://img.shields.io/badge/Status-Beta-yellow.svg)]()
+A serverless dating protocol built on GitHub infrastructure.
 
-> "Commit to love. Push to master."
+ForkFlirt replaces centralized dating algorithms with transparent, user-owned logic. You do not "sign up" for ForkFlirt. You **fork** it.
 
-ForkFlirt is a serverless dating infrastructure built entirely on top of GitHub. It replaces the centralized "Black Box" algorithms of Tinder/Hinge with transparent, user-owned logic.
+## Protocol Overview
 
-You do not "sign up" for ForkFlirt. You **fork** it.
+- **Database**: User profiles stored in public GitHub repositories
+- **Discovery**: GitHub Search API for finding profiles (`topic:forkflirt-profile`)
+- **Messaging**: End-to-end encrypted messages via GitHub Issues
+- **Verification**: Cross-platform identity verification through DNS, Keybase, and social platforms
 
 ---
 
-## ⚡️ The 30-Second Pitch
+## Quick Start
 
-1.  **You Own The Database:** Your profile is a JSON file in a repository you control.
-2.  **You Run The Algorithm:** The matching logic runs in your browser, not on a server in Silicon Valley.
-3.  **Encrypted Signals:** Messages are RSA-encrypted payloads transported via GitHub Issues.
-4.  **Identity, Not Algorithms:** Verify real humans via DNS TXT records, Keybase proofs, or personal domains. No catfishing.
+1. **Database**: Profile stored as JSON file in your repository
+2. **Algorithm**: Matching calculations run client-side in browser
+3. **Encryption**: Messages use RSA-OAEP/AES-GCM encryption
+4. **Identity**: Verify using DNS TXT records, Keybase, or social platforms
 
 ---
 
-## 🚀 Quick Start (Create a Profile)
+## Installation
 
-To join the network, you deploy your own instance of the client.
-
-1.  **Fork this Repository** to your personal GitHub account.
-2.  **Enable GitHub Pages:**
-    - Go to `Settings` -> `Pages`.
-    - Source: `GitHub Actions`.
-    - _The included workflow will automatically build and deploy the client._
-3.  **Visit your URL:** (e.g., `https://yourname.github.io/forkflirt`).
-4.  **Run the Wizard:** The app will generate your cryptographic keys and commit your `profile.json` automatically.
+1. **Fork this repository** to your GitHub account
+2. **Enable GitHub Pages:**
+   - Go to `Settings` -> `Pages`
+   - Source: `GitHub Actions`
+3. **Visit your deployed URL** (e.g., `https://username.github.io/forkflirt`)
+4. **Run the setup wizard** to generate cryptographic keys and create your profile
 
 ---
 
@@ -53,16 +45,14 @@ This repository contains both the official client and the protocol standards.
 
 ---
 
-## 🧠 Engineering & Protocol
+## Protocol Documentation
 
-ForkFlirt is a strictly defined protocol. If you are building a custom client (CLI, Mobile, Vim Plugin), start here:
-
-- **[01 - Architecture](./protocol/docs/01-ARCHITECTURE.md):** How we use GitHub as a serverless relay.
-- **[02 - Schema](./protocol/docs/02-SCHEMA.md):** The JSON standard (Bio, Vices, Survey Data).
-- **[03 - Security](./protocol/docs/03-SECURITY.md):** The RSA-OAEP/AES-GCM Handshake spec.
-- **[04 - The Algorithm](./protocol/docs/04-MATCHING.md):** How the Geometric Mean compatibility score is calculated.
-- **[05 - Moderation](./protocol/docs/05-MODERATION.md):** The `.forkflirtignore` blocklist standard.
-- **[06 - Verification](./protocol/docs/06-VERIFICATION.md):** Identity proofs via DNS TXT records and Keybase.
+- **[01 - Architecture](./protocol/docs/01-ARCHITECTURE.md):** GitHub as a serverless relay
+- **[02 - Schema](./protocol/docs/02-SCHEMA.md):** Profile JSON structure and validation
+- **[03 - Security](./protocol/docs/03-SECURITY.md):** Message encryption and key management
+- **[04 - Matching](./protocol/docs/04-MATCHING.md):** Compatibility score calculation
+- **[05 - Moderation](./protocol/docs/05-MODERATION.md):** Content filtering and blocking
+- **[06 - Verification](./protocol/docs/06-VERIFICATION.md):** Identity verification methods
 
 ### Core Concepts
 
@@ -70,21 +60,23 @@ ForkFlirt is a strictly defined protocol. If you are building a custom client (C
 
 We rely on the GitHub Search API. Clients query `topic:forkflirt-profile` to populate the global feed.
 
-#### 2. The "Handshake"
+#### 2. Messaging
 
-There is no backend. To message User B:
+No backend server. To message User B:
 
-1.  Client A fetches User B's `public_key`.
-2.  Client A encrypts the message.
-3.  Client A posts a GitHub Issue on Repo B titled `ForkFlirt Handshake`.
-4.  Client B (in browser) decrypts it locally.
+1. Client A fetches User B's public key from their profile
+2. Client A encrypts message using RSA-OAEP/AES-GCM
+3. Client A creates GitHub Issue on User B's repository
+4. Client B decrypts message locally using their private key
 
-#### 3. Verification (Trust Signals)
+#### 3. Identity Verification
 
-We rely on **Cross-Platform Identity**, not commit history. Since many Nerds (writers, gamers, scientists) do not push code, we verify you are a real human using:
+Uses cross-platform identity verification:
 
-- **DNS Verification:** Add a TXT record (`forkflirt-verify=username`) to a domain you own.
-- **Keybase:** If you have a Keybase account, we automatically trust your proofs (Twitter, Reddit, Mastodon).
+- **DNS Verification**: TXT record (`forkflirt-verify=username`) on owned domain
+- **Keybase**: Automatic verification of Twitter, Reddit, Mastodon proofs
+- **Well-Known Files**: JSON verification file on owned domain
+- **Mastodon**: Back-link verification through bio/metadata
 
 ---
 
@@ -105,20 +97,25 @@ This canary is automatically updated monthly. If this section is removed or not 
 **Immutable record**: `canary-2025-12-01` tag
 
 
-### 🔒 Privacy & Security
+### Security
 
-ForkFlirt is built on public GitHub repositories, which provides decentralization and data ownership but comes with inherent tradeoffs:
+#### Private Data
+- Message content (end-to-end encrypted)
+- Private keys (stored encrypted in IndexedDB, passphrase-protected)
+- Passphrases (never stored, used for PBKDF2 key derivation)
 
-#### What's Private
-- ✅ Message content (end-to-end encrypted)
-- ✅ Private keys (never leave your device)
-- ✅ Passphrase (never stored, only used for key derivation)
+#### Public Data
+- Profile data (stored in public GitHub repository)
+- Profile existence (discoverable via GitHub search)
+- Interaction metadata (GitHub Issues between users)
+- GitHub contribution graph
 
-#### What's Public
-- ⚠️ Profile data (stored in public GitHub repo)
-- ⚠️ Profile existence (discoverable via GitHub search)
-- ⚠️ Interaction metadata (who creates Issues on whose repo)
-- ⚠️ GitHub contribution graph
+#### Security Features
+- RSA-OAEP-2048 encryption with AES-GCM-256 session keys
+- Mandatory RSA-PSS message signatures
+- PBKDF2 key derivation (600,000 iterations)
+- Key rotation for forward secrecy
+- Replay protection and rate limiting
 
 #### Privacy Best Practices
 - Use a dedicated GitHub account for ForkFlirt
@@ -126,7 +123,6 @@ ForkFlirt is built on public GitHub repositories, which provides decentralizatio
 - Keep profile information minimal and non-specific
 - Use blocklists to control interactions
 - Regularly review who can see your profile
-- Enable the panic button in settings for emergency data deletion
 
 For detailed security information, see [SECURITY.md](./SECURITY.md)
 

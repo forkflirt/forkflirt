@@ -1,6 +1,6 @@
 # Matching Algorithm & Scoring Logic
 
-**Status:** Draft 1.0
+**Status:** Draft 1.1
 
 This document defines how a client must interpret the `survey` array in `profile.json` to calculate a **Compatibility Percentage** between User A (Viewer) and User B (Target).
 
@@ -80,15 +80,46 @@ If the set of questions answered by User A and User B has no intersection (count
 
 To ensure `q_ethics_01` means "Do you return your shopping cart?" for everyone, the Protocol Repository maintains the **Standard Question Bank**.
 
-Clients should ingest `https://raw.githubusercontent.com/forkflirt/protocol/main/questions/standard_set.json` to map IDs to human-readable text.
+### 5.1 Standard Question Set
+Clients should ingest `https://raw.githubusercontent.com/forkflirt/protocol/main/questions/standard_set.json` to map IDs to human-readable text. This file contains the canonical question definitions with standardized text and answer options.
 
-### Custom Questions
+### 5.2 Question ID Format
+- **Standard Questions**: Use prefix format `q_{category}_{number}` (e.g., `q_social_01`, `q_ethics_01`)
+- **Custom Questions**: Use prefix `q_custom_{uuid}` for user-defined questions
+- **Backwards Compatibility**: Clients must support both standard and custom question formats
+
+### 5.3 Question Categories
+Standard questions are organized into categories:
+- **social**: Social preferences and interaction styles
+- **tech**: Technology-related preferences
+- **ethics**: Ethical and moral questions
+- **lifestyle**: Lifestyle and daily habit questions
+
+### 5.4 Custom Questions
 
 Users MAY add custom `question_id`s (e.g., `q_custom_uuid`).
 
-- If the viewer does not have the question text for that ID in their local database, the question is ignored in the scoring.
+- **Scoring**: Custom questions participate in matching scoring like standard questions
+- **Display**: If the viewer does not have the question text for that ID in their local database, the question is ignored from scoring but may still be displayed as "Custom Question"
+- **Privacy**: Custom questions and answers are still subject to the same encryption and privacy protections as standard questions
 
-````
+## 6. Implementation Details
+
+### 6.1 Minimum Overlap Requirements
+Clients must enforce a minimum question overlap for meaningful matching:
+- **Default**: 3 overlapping questions required for score calculation
+- **Configuration**: Clients may expose this as a user preference
+- **UI Display**: Show "Unknown Match" or "?" when minimum overlap is not met
+
+### 6.2 Performance Considerations
+- **Caching**: Cache survey mappings for repeated calculations
+- **Efficiency**: Use Set data structures for acceptable answer lookups (O(1) complexity)
+- **Bidirectional**: Calculate both directions simultaneously when possible
+
+### 6.3 Edge Case Handling
+- **Missing Data**: Gracefully handle profiles with incomplete survey data
+- **Invalid Importance**: Default invalid importance values to "irrelevant" (0 points)
+- **Malformed Data**: Skip malformed survey entries without failing entire calculation
 
 ---
 
