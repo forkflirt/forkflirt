@@ -4,8 +4,14 @@ on:
   # Run on push to main (when user saves their profile or forks)
   push:
     branches: ["main"]
-  # Allow manual trigger
+  # Allow manual trigger with branch selection
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy'
+        required: true
+        default: 'main'
+        type: string
 
 # Permissions needed to deploy to Pages
 permissions:
@@ -20,35 +26,32 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./client # <--- MAGIC LINE: Runs everything inside /client
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'main' }}
 
-      - name: Install Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: "npm"
-          cache-dependency-path: client/package-lock.json
+          node-version: '22'
 
-      - name: Install Dependencies
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Install dependencies
+        working-directory: ./client
         run: npm ci
 
-      - name: Build SvelteKit
+      - name: Build
+        working-directory: ./client
         run: npm run build
-        env:
-          # Tells SvelteKit the repo name (e.g. /forkflirt) for asset linking
-          BASE_PATH: "/${{ github.event.repository.name }}"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Point to the build output inside the client folder
-          path: "./client/build"
+          path: './client/build'
 
   deploy:
     environment:

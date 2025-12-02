@@ -68,6 +68,86 @@ function constantTimeStringCompare(a: string, b: string): boolean {
   return result === 0;
 }
 
+// --- Enhanced Metadata Protection ---
+
+/**
+ * Protects metadata by adding padding and integrity checks
+ * to prevent traffic analysis and tampering
+ */
+export async function protectMetadata(metadata: EncryptedMessageMetadata): Promise<EncryptedMessageMetadata> {
+  const protectedMetadata = { ...metadata };
+
+  // Add random padding to normalize metadata size
+  const targetSize = 512; // Target metadata size in characters
+  const currentSize = JSON.stringify(metadata).length;
+
+  if (currentSize < targetSize) {
+    const paddingSize = targetSize - currentSize;
+    protectedMetadata._padding = Array.from(
+      crypto.getRandomValues(new Uint8Array(paddingSize))
+    ).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Add integrity checksum
+  protectedMetadata._checksum = await calculateMetadataChecksum(protectedMetadata);
+
+  return protectedMetadata;
+}
+
+/**
+ * Validates metadata integrity and removes padding
+ */
+export async function validateMetadata(metadata: EncryptedMessageMetadata): Promise<EncryptedMessageMetadata> {
+  const { _padding, _checksum, ...cleanMetadata } = metadata;
+
+  // Verify integrity checksum if present
+  if (_checksum) {
+    const calculatedChecksum = await calculateMetadataChecksum(metadata);
+    if (_checksum !== calculatedChecksum) {
+      throw new Error('Metadata integrity check failed - possible tampering detected');
+    }
+  }
+
+  return cleanMetadata;
+}
+
+/**
+ * Calculates checksum for metadata integrity
+ */
+async function calculateMetadataChecksum(metadata: EncryptedMessageMetadata): Promise<string> {
+  const { _checksum, ...dataWithoutChecksum } = metadata;
+  const dataString = JSON.stringify(dataWithoutChecksum, Object.keys(dataWithoutChecksum).sort());
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(dataString);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Normalizes metadata size to prevent traffic analysis
+ */
+export function normalizeMetadataSize(metadata: EncryptedMessageMetadata): EncryptedMessageMetadata {
+  // Target similar metadata sizes across different message types
+  const normalized = { ...metadata };
+
+  // Ensure consistent timestamp format
+  if (normalized.timestamp) {
+    normalized.timestamp = Math.floor(normalized.timestamp / 1000) * 1000; // Round to nearest second
+  }
+
+  // Ensure consistent ID formats
+  if (normalized.message_id) {
+    // Pad message ID to consistent length if needed
+    const targetLength = 32;
+    if (normalized.message_id.length < targetLength) {
+      normalized.message_id = normalized.message_id.padEnd(targetLength, '0');
+    }
+  }
+
+  return normalized;
+}
+
 // --- Enhanced Replay Protection Store ---
 
 import { get, set, del } from 'idb-keyval';
@@ -79,6 +159,8 @@ export interface EncryptedMessageMetadata {
   message_id: string;
   expires_at: number;
   reply_to?: string;
+  _padding?: string; // Random padding to normalize metadata size
+  _checksum?: string; // Integrity checksum for metadata
 }
 
 interface SeenMessage {
@@ -268,8 +350,10 @@ export async function encryptMessage(
     rawSessionKey
   );
 
-  // 6. Encrypt metadata with recipient's public key
-  const encodedMetadata = enc.encode(JSON.stringify(metadata));
+  // 6. Protect and encrypt metadata with recipient's public key
+  const normalizedMetadata = normalizeMetadataSize(metadata);
+  const protectedMetadata = await protectMetadata(normalizedMetadata);
+  const encodedMetadata = enc.encode(JSON.stringify(protectedMetadata));
   const encryptedMetadata = await window.crypto.subtle.encrypt(
     { name: "RSA-OAEP" },
     recipientPublicKey,
@@ -373,7 +457,10 @@ export async function decryptMessage(
       myPrivateKey,
       encryptedMetadata
     );
-    metadata = JSON.parse(new TextDecoder().decode(rawMetadata));
+    const parsedMetadata = JSON.parse(new TextDecoder().decode(rawMetadata));
+
+    // Validate metadata integrity and remove padding
+    metadata = await validateMetadata(parsedMetadata);
   } catch (err) {
     throw createSecurityError("Message processing failed", err);
   }
