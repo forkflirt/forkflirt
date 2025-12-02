@@ -104,7 +104,7 @@ The matching logic is bidirectional.
     - **Final Match %:** The Geometric Mean: $\sqrt{Score_{AB} \times Score_{BA}}$.
 5.  **Sorting:** Feed must be sorted by Final Match %.
 
-### 4.5 Decentralized Moderation (`lib/logic/moderation.ts`)
+### 4.5 Moderation (`lib/logic/moderation.ts`)
 
 Before rendering the feed, the client must build a "Block Ruleset".
 

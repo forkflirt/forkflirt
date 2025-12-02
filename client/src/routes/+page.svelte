@@ -23,7 +23,7 @@
           </div>
         </div>
         <h1 class="text-5xl font-bold text-primary mb-2">ForkFlirt</h1>
-        <p class="text-lg text-base-content/70">Secure, decentralized dating for nerds</p>
+        <p class="text-lg text-base-content/70">Secure dating for nerds</p>
         <div class="badge badge-primary badge-lg mt-2">GitHub-Powered</div>
               </div>
 
