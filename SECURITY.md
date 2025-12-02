@@ -110,10 +110,10 @@ Subscribe to security announcements: GitHub Watch → Custom → Security alerts
 ### 🕊️ Warrant Canary
 
 As of **December 1, 2025**:
-- Plug Puppy LLC has not received any warrants (government orders, subpoenas, NSLs, etc.)
-- Plug Puppy LLC has not received any gag orders or non-disclosure requirements
-- Plug Puppy LLC has not been compelled to modify the ForkFlirt codebase
-- Plug Puppy LLC has not been required to hand over user data
+- Plug Puppy LLC has not received any government warrants, subpoenas, court orders, or surveillance demands
+- Plug Puppy LLC has not received any gag orders, National Security Letters, or non-disclosure requirements
+- Plug Puppy LLC has not been compelled to modify the ForkFlirt codebase or provide user data
+- Plug Puppy LLC has not been subjected to any compelled disclosure requests
 
 This canary is automatically updated monthly. If this section is removed or not updated for 60 days, assume compromise.
 

@@ -32,8 +32,14 @@ jobs:
           # Update README.md with new timestamp and comprehensive warrant language
           sed -i "s/Last updated: [0-9-]*/Last updated: $CURRENT_DATE/" README.md
           sed -i "s/As of \*\*[0-9-]\+\*\*/As of **$CURRENT_DATE**/" README.md
-          sed -i "s/Plug Puppy LLC has not received any National Security Letters/Plug Puppy LLC has not received any warrants (government orders, subpoenas, NSLs, etc.)/" README.md
-          sed -i "s/Plug Puppy LLC has not received any gag orders/Plug Puppy LLC has not received any gag orders or non-disclosure requirements/" README.md
+          sed -i "s/Plug Puppy LLC has not received any government warrants, subpoenas, court orders, or surveillance demands/Plug Puppy LLC has not received any government warrants, subpoenas, court orders, or surveillance demands/" README.md
+          sed -i "s/Plug Puppy LLC has not received any warrants (government orders, subpoenas, NSLs, etc.)/Plug Puppy LLC has not received any government warrants, subpoenas, court orders, or surveillance demands/" README.md
+          sed -i "s/Plug Puppy LLC has not received any gag orders or non-disclosure requirements/Plug Puppy LLC has not received any gag orders, National Security Letters, or non-disclosure requirements/" README.md
+
+          # Update SECURITY.md with comprehensive warrant language
+          sed -i "s/As of \*\*[0-9-]\+\*\*/As of **$CURRENT_DATE**/" SECURITY.md
+          sed -i "s/Plug Puppy LLC has not received any warrants (government orders, subpoenas, NSLs, etc.)/Plug Puppy LLC has not received any government warrants, subpoenas, court orders, or surveillance demands/" SECURITY.md
+          sed -i "s/Plug Puppy LLC has not received any gag orders or non-disclosure requirements/Plug Puppy LLC has not received any gag orders, National Security Letters, or non-disclosure requirements/" SECURITY.md
 
           # Update timestamp in canary update log (if it exists)
           echo "[$CURRENT_ISO] Automated warrant canary update completed" >> CANARY_UPDATES.log
@@ -44,30 +50,35 @@ jobs:
 
       - name: Validate canary format
         run: |
-          # Verify the canary section exists and has correct format
-          if ! grep -q "As of \*\*[0-9-]\+\*\*" README.md; then
-            echo "Error: Canary section not found or has wrong format"
-            exit 1
-          fi
+          # Verify the canary section exists and has correct format in both files
+          for FILE in README.md SECURITY.md; do
+            if ! grep -q "As of \*\*[0-9-]\+\*\*" $FILE; then
+              echo "Error: Canary section not found or has wrong format in $FILE"
+              exit 1
+            fi
+          done
 
-          # Verify the date is recent (within last day)
-          CANARY_DATE=$(grep -o "As of \*\*[0-9-]\+\*\*" README.md | grep -o "[0-9-]\+")
-          CANARY_TIMESTAMP=$(date -d "$CANARY_DATE" +%s 2>/dev/null || echo 0)
+          # Verify the date is recent (within last day) in both files
           CURRENT_TIMESTAMP=$(date +%s)
           DAY_IN_SECONDS=86400
 
-          if [ $((CURRENT_TIMESTAMP - CANARY_TIMESTAMP)) -gt $DAY_IN_SECONDS ]; then
-            echo "Error: Canary date seems too old: $CANARY_DATE"
-            exit 1
-          fi
+          for FILE in README.md SECURITY.md; do
+            CANARY_DATE=$(grep -o "As of \*\*[0-9-]\+\*\*" $FILE | grep -o "[0-9-]\+")
+            CANARY_TIMESTAMP=$(date -d "$CANARY_DATE" +%s 2>/dev/null || echo 0)
 
-          echo "Canary validation passed"
+            if [ $((CURRENT_TIMESTAMP - CANARY_TIMESTAMP)) -gt $DAY_IN_SECONDS ]; then
+              echo "Error: Canary date seems too old in $FILE: $CANARY_DATE"
+              exit 1
+            fi
+          done
+
+          echo "Canary validation passed for README.md and SECURITY.md"
 
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: Update warrant canary - $(date +'%Y-%m-%d')"
-          file_pattern: 'README.md CANARY_UPDATES.log'
+          file_pattern: 'README.md SECURITY.md CANARY_UPDATES.log'
           commit_user_name: forkflirt-bot
           commit_user_email: bot@forkflirt.dev
           commit_author_name: ForkFlirt Canary Bot
