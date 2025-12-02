@@ -1,5 +1,4 @@
 import { Octokit } from "@octokit/rest";
-import { createOAuthDeviceAuth } from "@octokit/auth-oauth-device";
 import { validateProfile } from "../schemas/validator";
 import type { Profile } from "../schemas/validator"; // Inferred type from JSON schema if you setup types generation, else 'any'
 

@@ -1,5 +1,12 @@
 {
   "devDependencies": {
     "daisyui": "^5.5.5"
+  },
+  "dependencies": {
+    "husky": "^9.1.7",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "prepare": "husky"
   }
 }
