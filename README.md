@@ -1,4 +1,10 @@
-# ForkFlirt
+<div align="center">
+  <img src="./header.png" alt="ForkFlirt Banner" width="100%" />
+  
+  <h1>ForkFlirt 💘</h1>
+  
+  <p><strong>Github Dating For Nerds.</strong></p>
+</div>
 
 A serverless dating protocol built on GitHub infrastructure.
 
