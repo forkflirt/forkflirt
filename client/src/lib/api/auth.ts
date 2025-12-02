@@ -244,8 +244,26 @@ export interface AuthUser {
 // --- Token Validation ---
 
 function isValidGitHubTokenFormat(token: string): boolean {
-  // GitHub PATs are 40+ hex characters
-  return /^[a-f0-9]{40,}$/.test(token);
+  // GitHub PATs can have different formats:
+  // - Classic tokens: ghp_ followed by 36+ base64url characters (A-Z, a-z, 0-9, -, _)
+  // - Fine-grained tokens: github_pat_ followed by longer strings
+  if (!token) return false;
+
+  // Classic PAT format (ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX)
+  if (token.startsWith('ghp_')) {
+    const tokenPart = token.substring(4); // Remove 'ghp_' prefix
+    // GitHub modern tokens use base64url characters: A-Z, a-z, 0-9, -, _
+    return /^[A-Za-z0-9_-]{36,}$/.test(tokenPart);
+  }
+
+  // Fine-grained PAT format (github_pat_XXXXXXXXXXXXXX_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX)
+  if (token.startsWith('github_pat_')) {
+    const tokenPart = token.substring(11); // Remove 'github_pat_' prefix
+    return /^[a-zA-Z0-9_]{20,}$/.test(tokenPart);
+  }
+
+  // Legacy format (just hex characters)
+  return /^[a-fA-F0-9]{40,}$/.test(token);
 }
 
 // --- Token Source Detection ---
@@ -308,14 +326,18 @@ export async function loginWithToken(
   
   // Validate CSRF token for manual input
   if (tokenSource.method === 'manual') {
-    if (!csrfToken || !(await validateCSRFToken(csrfToken, 'login'))) {
+    // If no CSRF token provided, try to generate one for validation
+    if (!csrfToken) {
+      csrfToken = await generateCSRFToken('login');
+    }
+    if (!(await validateCSRFToken(csrfToken, 'login'))) {
       throw new Error("Invalid CSRF token. Please refresh the page and try again.");
     }
   }
   
   // Validate token format
   if (!isValidGitHubTokenFormat(token)) {
-    throw new Error("Invalid token format. GitHub PATs should be 40+ hexadecimal characters.");
+    throw new Error("Invalid token format. GitHub PATs should start with 'ghp_' followed by valid characters.");
   }
   
   // Rate limiting check

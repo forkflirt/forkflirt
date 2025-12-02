@@ -163,11 +163,11 @@
 </script>
 
 {#if isOpen}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+  <div class="fixed inset-0 bg-neutral/50 flex items-center justify-center z-50">
+    <div class="bg-base-100 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
       <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-semibold text-gray-900">Key Security Management</h2>
-        <button on:click={closeModal} class="text-gray-400 hover:text-gray-600" aria-label="Close">
+        <h2 class="text-2xl font-semibold text-base-content">Key Security Management</h2>
+        <button on:click={closeModal} class="text-base-content/50 hover:text-base-content" aria-label="Close">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -175,41 +175,32 @@
       </div>
 
       <!-- Tab Navigation -->
-      <div class="border-b border-gray-200 mb-6">
+      <div class="border-b border-base-300 mb-6">
         <nav class="flex space-x-8">
           <button
             on:click={() => activeTab = 'status'}
-            class="pb-2 px-1 border-b-2 font-medium text-sm"
-            class:border-blue-500={activeTab === 'status'}
-            class:text-blue-600={activeTab === 'status'}
-            class:border-transparent={activeTab !== 'status'}
-            class:text-gray-500={activeTab !== 'status'}
-            class:hover:text-gray-700={activeTab !== 'status'}
-            class:hover:border-gray-300={activeTab !== 'status'}
+            class="pb-2 px-1 border-b-2 font-medium text-sm {{
+              'border-primary text-primary': activeTab === 'status',
+              'border-transparent text-base-content/50 hover:text-base-content hover:border-base-300': activeTab !== 'status'
+            }}"
           >
             Status
           </button>
           <button
             on:click={() => activeTab = 'rotate'}
-            class="pb-2 px-1 border-b-2 font-medium text-sm"
-            class:border-blue-500={activeTab === 'rotate'}
-            class:text-blue-600={activeTab === 'rotate'}
-            class:border-transparent={activeTab !== 'rotate'}
-            class:text-gray-500={activeTab !== 'rotate'}
-            class:hover:text-gray-700={activeTab !== 'rotate'}
-            class:hover:border-gray-300={activeTab !== 'rotate'}
+            class="pb-2 px-1 border-b-2 font-medium text-sm {{
+              'border-primary text-primary': activeTab === 'rotate',
+              'border-transparent text-base-content/50 hover:text-base-content hover:border-base-300': activeTab !== 'rotate'
+            }}"
           >
             Rotate Key
           </button>
           <button
             on:click={() => activeTab = 'config'}
-            class="pb-2 px-1 border-b-2 font-medium text-sm"
-            class:border-blue-500={activeTab === 'config'}
-            class:text-blue-600={activeTab === 'config'}
-            class:border-transparent={activeTab !== 'config'}
-            class:text-gray-500={activeTab !== 'config'}
-            class:hover:text-gray-700={activeTab !== 'config'}
-            class:hover:border-gray-300={activeTab !== 'config'}
+            class="pb-2 px-1 border-b-2 font-medium text-sm {{
+              'border-primary text-primary': activeTab === 'config',
+              'border-transparent text-base-content/50 hover:text-base-content hover:border-base-300': activeTab !== 'config'
+            }}"
           >
             Configuration
           </button>
@@ -218,13 +209,13 @@
 
       <!-- Error/Success Messages -->
       {#if error}
-        <div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+        <div class="mb-4 p-3 bg-error/10 border border-error/30 text-error rounded-md">
           {error}
         </div>
       {/if}
 
       {#if success}
-        <div class="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md">
+        <div class="mb-4 p-3 bg-success/10 border border-success/30 text-success rounded-md">
           {success}
         </div>
       {/if}
@@ -232,59 +223,57 @@
       <!-- Status Tab -->
       {#if activeTab === 'status'}
         <div class="space-y-6">
-          <div class="bg-gray-50 p-4 rounded-lg">
-            <h3 class="text-lg font-medium text-gray-900 mb-3">Current Key Status</h3>
+          <div class="bg-base-200 p-4 rounded-lg">
+            <h3 class="text-lg font-medium text-base-content mb-3">Current Key Status</h3>
 
             {#if currentRotationData}
               <dl class="grid grid-cols-1 gap-4">
                 <div>
-                  <dt class="text-sm font-medium text-gray-500">Key Version</dt>
-                  <dd class="mt-1 text-sm text-gray-900">#{currentRotationData.rotation_version}</dd>
+                  <dt class="text-sm font-medium text-base-content/70">Key Version</dt>
+                  <dd class="mt-1 text-sm text-base-content">#{currentRotationData.rotation_version}</dd>
                 </div>
 
                 <div>
-                  <dt class="text-sm font-medium text-gray-500">Current Key Created</dt>
-                  <dd class="mt-1 text-sm text-gray-900">{formatDate(currentRotationData.rotation_timestamp)}</dd>
+                  <dt class="text-sm font-medium text-base-content/70">Current Key Created</dt>
+                  <dd class="mt-1 text-sm text-base-content">{formatDate(currentRotationData.rotation_timestamp)}</dd>
                 </div>
 
                 <div>
-                  <dt class="text-sm font-medium text-gray-500">Previous Keys</dt>
-                  <dd class="mt-1 text-sm text-gray-900">{currentRotationData.previous_keys.length} stored</dd>
+                  <dt class="text-sm font-medium text-base-content/70">Previous Keys</dt>
+                  <dd class="mt-1 text-sm text-base-content">{currentRotationData.previous_keys.length} stored</dd>
                 </div>
 
                 <div>
-                  <dt class="text-sm font-medium text-gray-500">Next Rotation</dt>
-                  <dd class="mt-1 text-sm text-gray-900">{nextRotationDate} ({daysUntilRotation()})</dd>
+                  <dt class="text-sm font-medium text-base-content/70">Next Rotation</dt>
+                  <dd class="mt-1 text-sm text-base-content">{nextRotationDate} ({daysUntilRotation()})</dd>
                 </div>
 
                 <div>
-                  <dt class="text-sm font-medium text-gray-500">Auto-Rotation</dt>
-                  <dd class="mt-1 text-sm text-gray-900">
-                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                          class:bg-green-100={currentConfig.auto_rotate}
-                          class:text-green-800={currentConfig.auto_rotate}
-                          class:bg-gray-100={!currentConfig.auto_rotate}
-                          class:text-gray-800={!currentConfig.auto_rotate}>
+                  <dt class="text-sm font-medium text-base-content/70">Auto-Rotation</dt>
+                  <dd class="mt-1 text-sm text-base-content">
+                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {{
+                          'bg-success/20 text-success': currentConfig.auto_rotate,
+                          'bg-base-300 text-base-content': !currentConfig.auto_rotate
+                        }}">
                       {currentConfig.auto_rotate ? 'Enabled' : 'Disabled'}
                     </span>
                   </dd>
                 </div>
 
                 <div>
-                  <dt class="text-sm font-medium text-gray-500">Rotation Status</dt>
-                  <dd class="mt-1 text-sm text-gray-900">
-                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                          class:bg-yellow-100={rotationStatus}
-                          class:text-yellow-800={rotationStatus}
-                          class:bg-green-100={!rotationStatus}
-                          class:text-green-800={!rotationStatus}>
+                  <dt class="text-sm font-medium text-base-content/70">Rotation Status</dt>
+                  <dd class="mt-1 text-sm text-base-content">
+                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {{
+                          'bg-warning/20 text-warning': rotationStatus,
+                          'bg-success/20 text-success': !rotationStatus
+                        }}">
                       {rotationStatus ? 'Rotation Recommended' : 'Up to Date'}
                     </span>
                   </dd>
                 </div>
               </dl>
             {:else}
-              <p class="text-sm text-gray-600">
+              <p class="text-sm text-base-content/70">
                 Key rotation data not found. Your profile will be migrated to the key rotation system
                 during the next key rotation.
               </p>
@@ -296,9 +285,9 @@
       <!-- Rotate Key Tab -->
       {#if activeTab === 'rotate'}
         <div class="space-y-6">
-          <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-md">
-            <h4 class="text-sm font-medium text-yellow-800 mb-2">Important Security Notice</h4>
-            <ul class="text-sm text-yellow-700 space-y-1">
+          <div class="bg-warning/10 border border-warning/30 p-4 rounded-md">
+            <h4 class="text-sm font-medium text-warning mb-2">Important Security Notice</h4>
+            <ul class="text-sm text-warning/80 space-y-1">
               <li>• Key rotation creates a new cryptographic identity</li>
               <li>• Your previous key is kept for decryption of old messages</li>
               <li>• Your profile will be automatically re-signed with the new key</li>
@@ -308,7 +297,7 @@
 
           <form on:submit|preventDefault={handleRotateKey} class="space-y-4">
             <div>
-              <label for="passphrase" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="passphrase" class="block text-sm font-medium text-base-content mb-1">
                 Current Passphrase
               </label>
               <input
@@ -316,13 +305,13 @@
                 type="password"
                 bind:value={passphrase}
                 placeholder="Enter your passphrase"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-base-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 required
               />
             </div>
 
             <div>
-              <label for="passphraseConfirm" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="passphraseConfirm" class="block text-sm font-medium text-base-content mb-1">
                 Confirm Passphrase
               </label>
               <input
@@ -330,7 +319,7 @@
                 type="password"
                 bind:value={passphraseConfirm}
                 placeholder="Confirm your passphrase"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-base-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 required
               />
             </div>
@@ -338,11 +327,11 @@
             <button
               type="submit"
               disabled={isLoading || !passphrase || !passphraseConfirm}
-              class="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              class="w-full bg-error text-error-content py-2 px-4 rounded-md hover:bg-error/90 disabled:bg-base-300 disabled:cursor-not-allowed"
             >
               {#if isLoading}
                 <span class="inline-flex items-center">
-                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-error-content" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -361,7 +350,7 @@
         <div class="space-y-6">
           <form on:submit|preventDefault={handleConfigSave} class="space-y-4">
             <div>
-              <label for="rotationInterval" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="rotationInterval" class="block text-sm font-medium text-base-content mb-1">
                 Rotation Interval (days)
               </label>
               <input
@@ -370,15 +359,15 @@
                 bind:value={currentConfig.rotation_interval_days}
                 min="30"
                 max="730"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-base-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <p class="mt-1 text-sm text-gray-500">
+              <p class="mt-1 text-sm text-base-content/70">
                 How often to automatically rotate keys (30-730 days)
               </p>
             </div>
 
             <div>
-              <label for="transitionPeriod" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="transitionPeriod" class="block text-sm font-medium text-base-content mb-1">
                 Transition Period (days)
               </label>
               <input
@@ -387,15 +376,15 @@
                 bind:value={currentConfig.transition_period_days}
                 min="7"
                 max="180"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-base-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <p class="mt-1 text-sm text-gray-500">
+              <p class="mt-1 text-sm text-base-content/70">
                 How long previous keys remain valid for decryption (7-180 days)
               </p>
             </div>
 
             <div>
-              <label for="maxPreviousKeys" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="maxPreviousKeys" class="block text-sm font-medium text-base-content mb-1">
                 Maximum Previous Keys
               </label>
               <input
@@ -404,9 +393,9 @@
                 bind:value={currentConfig.max_previous_keys}
                 min="1"
                 max="10"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-base-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <p class="mt-1 text-sm text-gray-500">
+              <p class="mt-1 text-sm text-base-content/70">
                 Maximum number of previous keys to keep for decryption (1-10)
               </p>
             </div>
@@ -416,19 +405,19 @@
                 id="autoRotate"
                 type="checkbox"
                 bind:checked={currentConfig.auto_rotate}
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                class="h-4 w-4 text-primary focus:ring-primary border-base-300 rounded"
               />
-              <label for="autoRotate" class="ml-2 block text-sm text-gray-700">
+              <label for="autoRotate" class="ml-2 block text-sm text-base-content">
                 Enable automatic key rotation
               </label>
             </div>
-            <p class="mt-1 text-sm text-gray-500">
+            <p class="mt-1 text-sm text-base-content/70">
               When enabled, keys will be automatically rotated on the scheduled date
             </p>
 
             <button
               type="submit"
-              class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+              class="w-full bg-primary text-primary-content py-2 px-4 rounded-md hover:bg-primary/90"
             >
               Save Configuration
             </button>

@@ -32,7 +32,7 @@ export function validatePassphrase(passphrase: string): PassphraseValidation {
   const words = passphrase.trim().split(/[\s\-\.]+/);
   const hasLetters = /[a-zA-Z]/.test(passphrase);
   const hasNumbers = /\d/.test(passphrase);
-  const hasSymbols = /[^\w\s]/.test(passphrase);
+  const hasSymbols = /[^\w]/.test(passphrase); // Count spaces and punctuation as symbols
 
   // Basic requirements
   if (words.length < 4) return { valid: false, reason: "Must be at least 4 words" };

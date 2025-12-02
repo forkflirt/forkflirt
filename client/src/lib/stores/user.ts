@@ -4,7 +4,6 @@ import {
   restoreSession,
   loginWithToken,
   logout as authLogout,
-  generateCSRFToken,
 } from "../api/auth";
 import { fetchRawProfile } from "../api/github";
 import { hasIdentity, hasEncryptedIdentity, deleteIdentity } from "../crypto/keys";
@@ -86,17 +85,25 @@ export async function initApp() {
  * 4. Fetches Profile & Key Status
  */
 export async function login(token: string) {
+  console.log('🔍 Login process starting...');
   userStore.update((s) => ({ ...s, loading: true, error: null }));
 
   try {
-    // Generate CSRF token for this login attempt
-    const csrfToken = await generateCSRFToken();
-    
-    const auth = await loginWithToken(token, csrfToken);
+    console.log('🔍 Validating token with CSRF...');
+    // Validate with existing CSRF token from login page
+    const auth = await loginWithToken(token);
+    console.log('🔍 Auth successful:', auth);
+
+    console.log('🔍 Checking for keys...');
     const keysExist = await hasIdentity();
     const encryptedKeysExist = await hasEncryptedIdentity();
-    const profile = await fetchRawProfile(auth.login, "forkflirt");
+    console.log('🔍 Keys status:', { keysExist, encryptedKeysExist });
 
+    console.log('🔍 Fetching profile...');
+    const profile = await fetchRawProfile(auth.login, "forkflirt");
+    console.log('🔍 Profile fetched:', profile);
+
+    console.log('🔍 Updating user store...');
     userStore.set({
       auth,
       profile,
@@ -106,9 +113,13 @@ export async function login(token: string) {
       error: null,
     });
 
+    console.log('🔍 User store updated successfully');
+
     // Hard reload to ensure Octokit singleton is fresh across app
-    window.location.reload();
+    window.location.href = '/';
+    console.log('🔍 Redirecting to home page');
   } catch (err: any) {
+    console.error('🔍 Login error:', err);
     userStore.update((s) => ({
       ...s,
       loading: false,

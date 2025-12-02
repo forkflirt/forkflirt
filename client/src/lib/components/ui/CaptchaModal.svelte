@@ -160,15 +160,15 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+<div class="fixed inset-0 bg-base-300/80 flex items-center justify-center z-50">
+  <div class="bg-base-100 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
     <div class="text-center">
-      <h2 class="text-xl font-semibold text-gray-900 mb-2">Security Check</h2>
-      <p id="captcha-instruction" class="text-sm text-gray-600 mb-4">
+      <h2 class="text-xl font-semibold text-base-content mb-2">Security Check</h2>
+      <p id="captcha-instruction" class="text-sm text-base-content/70 mb-4">
         Please enter the text you see in the image below
       </p>
 
-      <div class="bg-gray-50 rounded-lg p-4 mb-4 border-2 border-gray-200">
+      <div class="bg-base-200 rounded-lg p-4 mb-4 border-2 border-base-300">
         {#if captchaDataUrl}
           <img
             src={captchaDataUrl}
@@ -179,7 +179,7 @@
           />
         {:else}
           <div class="h-16 flex items-center justify-center">
-            <div class="animate-pulse text-gray-400">Loading CAPTCHA...</div>
+            <div class="animate-pulse text-base-content/50">Loading CAPTCHA...</div>
           </div>
         {/if}
       </div>
@@ -189,7 +189,7 @@
           type="text"
           bind:value={userAnswer}
           placeholder="Enter the text you see"
-          class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          class="flex-1 input input-bordered input-md focus:outline-none focus:ring-2 focus:ring-primary"
           disabled={loading}
           autocomplete="off"
           spellcheck="false"
@@ -197,7 +197,7 @@
         <button
           type="button"
           on:click={generateNewCaptcha}
-          class="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+          class="btn btn-square btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-200 focus:outline-none focus:ring-2 focus:ring-primary"
           disabled={loading || rateLimited}
           title="Get new image"
         >
@@ -206,7 +206,7 @@
       </div>
 
       {#if error}
-        <div class="text-red-500 text-sm mb-4 p-2 bg-red-50 rounded border border-red-200">
+        <div class="text-error text-sm mb-4 p-2 bg-error/10 rounded border border-error/20">
           {error}
         </div>
       {/if}
@@ -215,7 +215,7 @@
         <div class="flex gap-2 mb-3">
           <button
             type="submit"
-            class="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 btn btn-primary text-base-100 hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading || rateLimited}
           >
             {loading ? 'Verifying...' : 'Verify'}
@@ -226,7 +226,7 @@
           <button
             type="button"
             on:click={showAudioChallenge}
-            class="text-xs text-gray-600 hover:text-gray-800 underline"
+            class="text-xs text-base-content/70 hover:text-base-content underline"
             title="Alternative challenge option"
           >
             Need help?
@@ -236,7 +236,7 @@
         <button
           type="button"
           on:click={handleCancel}
-          class="w-full mt-4 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 focus:outline-none"
+          class="w-full mt-4 btn btn-ghost text-sm text-base-content/70 hover:text-base-content"
         >
           Cancel
         </button>

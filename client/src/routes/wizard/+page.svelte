@@ -66,25 +66,25 @@
     }
   }
 
-  function validatePassphrase(): { valid: boolean; reason?: string } {
-    const words = passphrase.trim().split(/[\s\-\.]+/);
-    const hasLetters = /[a-zA-Z]/.test(passphrase);
-    const hasNumbers = /\d/.test(passphrase);
-    const hasSymbols = /[^\w\s]/.test(passphrase);
-    
+  function validatePassphrase(p: string): { valid: boolean; reason?: string } {
+    const words = p.trim().split(/[\s\-\.]+/);
+    const hasLetters = /[a-zA-Z]/.test(p);
+    const hasNumbers = /\d/.test(p);
+    const hasSymbols = /[^\w]/.test(p);
+
     if (words.length < 4) return { valid: false, reason: "Must be at least 4 words" };
-    if (passphrase.length < 12) return { valid: false, reason: "Must be at least 12 characters" };
-    
+    if (p.length < 12) return { valid: false, reason: "Must be at least 12 characters" };
+
     const complexityCount = [hasLetters, hasNumbers, hasSymbols].filter(Boolean).length;
     if (complexityCount < 2) return { valid: false, reason: "Must include at least 2 of: letters, numbers, symbols" };
-    
+
     return { valid: true };
   }
 
-  $: validation = validatePassphrase();
+  $: validation = validatePassphrase(passphrase);
   $: hasLetters = /[a-zA-Z]/.test(passphrase);
   $: hasNumbers = /\d/.test(passphrase);
-  $: hasSymbols = /[^\w\s]/.test(passphrase);
+  $: hasSymbols = /[^\w]/.test(passphrase);
   $: complexityOk = hasLetters && (hasNumbers || hasSymbols);
 </script>
 
@@ -138,7 +138,7 @@
                 type="password"
                 bind:value={passphrase}
                 class="input input-bordered w-full font-mono"
-                placeholder="correct horse battery staple staple"
+                placeholder="correct horse battery staple"
                 disabled={loading}
               />
             </div>
