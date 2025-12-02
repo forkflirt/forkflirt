@@ -183,6 +183,21 @@ export interface Profile {
     fingerprint?: string;
     key_type?: string;
     signature?: string;
+    profile_signature?: string;
+    signature_timestamp?: string;
+    signature_nonce?: string;
+    key_rotation?: {
+      current_key: string;
+      previous_keys: Array<{
+        public_key: string;
+        timestamp: string;
+        deactivated: string;
+        version: number;
+      }>;
+      rotation_timestamp: string;
+      next_rotation?: string;
+      rotation_version: number;
+    };
   };
   preferences?: {
     looking_for?: string[];

@@ -14,8 +14,7 @@ export async function signProfile(profile: Profile, privateKey: CryptoKey): Prom
   try {
     // Create canonical profile string (excluding signature fields)
     const { security, ...profileWithoutSignature } = profile;
-    const securityObj = security as any;
-    const { profile_signature, signature_timestamp, signature_nonce, ...securityWithoutSignature } = securityObj;
+    const { profile_signature, signature_timestamp, signature_nonce, ...securityWithoutSignature } = security;
 
     const canonicalProfile = JSON.stringify({
       ...profileWithoutSignature,
@@ -62,8 +61,7 @@ export async function signProfile(profile: Profile, privateKey: CryptoKey): Prom
 export async function verifyProfileSignature(profile: Profile, publicKey: CryptoKey): Promise<boolean> {
   try {
     // Check if profile has signature fields
-    const securityData = profile.security as any;
-    const { profile_signature, signature_timestamp, signature_nonce } = securityData;
+    const { profile_signature, signature_timestamp, signature_nonce } = profile.security;
 
     if (!profile_signature || !signature_timestamp || !signature_nonce) {
       console.warn('Profile missing required signature fields');
@@ -82,7 +80,7 @@ export async function verifyProfileSignature(profile: Profile, publicKey: Crypto
 
     // Create canonical profile string (same as in signing)
     const { security, ...profileWithoutSignature } = profile;
-    const { profile_signature: _, signature_timestamp: __, signature_nonce: ___, ...securityWithoutSignature } = securityData;
+    const { profile_signature: _, signature_timestamp: __, signature_nonce: ___, ...securityWithoutSignature } = security;
 
     const canonicalProfile = JSON.stringify({
       ...profileWithoutSignature,
@@ -124,8 +122,7 @@ export async function verifyProfileSignature(profile: Profile, publicKey: Crypto
  * Profiles should be re-signed when content changes.
  */
 export function needsSignature(profile: Profile): boolean {
-  const securityData = profile.security as any;
-  const { profile_signature, signature_timestamp, signature_nonce } = securityData;
+  const { profile_signature, signature_timestamp, signature_nonce } = profile.security;
 
   // If any signature field is missing, profile needs signing
   if (!profile_signature || !signature_timestamp || !signature_nonce) {
@@ -145,16 +142,16 @@ export function needsSignature(profile: Profile): boolean {
  * This is useful for migrating existing profiles.
  */
 export function addSignatureFields(profile: Profile): Profile {
-  const securityData = profile.security as any || {};
+  const security = profile.security || {};
 
   return {
     ...profile,
     security: {
       ...profile.security,
-      ...(securityData.profile_signature && { profile_signature: securityData.profile_signature }),
-      ...(securityData.signature_timestamp && { signature_timestamp: securityData.signature_timestamp }),
-      ...(securityData.signature_nonce && { signature_nonce: securityData.signature_nonce })
-    } as any
+      ...(security.profile_signature && { profile_signature: security.profile_signature }),
+      ...(security.signature_timestamp && { signature_timestamp: security.signature_timestamp }),
+      ...(security.signature_nonce && { signature_nonce: security.signature_nonce })
+    }
   };
 }
 

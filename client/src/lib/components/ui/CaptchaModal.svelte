@@ -164,7 +164,7 @@
   <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
     <div class="text-center">
       <h2 class="text-xl font-semibold text-gray-900 mb-2">Security Check</h2>
-      <p class="text-sm text-gray-600 mb-4">
+      <p id="captcha-instruction" class="text-sm text-gray-600 mb-4">
         Please enter the text you see in the image below
       </p>
 
@@ -172,7 +172,8 @@
         {#if captchaDataUrl}
           <img
             src={captchaDataUrl}
-            alt="CAPTCHA image with distorted text"
+            alt=""
+            aria-labelledby="captcha-instruction"
             class="mx-auto rounded"
             style="image-rendering: crisp-edges;"
           />

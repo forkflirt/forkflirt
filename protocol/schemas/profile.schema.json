@@ -167,6 +167,59 @@
           "type": "string",
           "format": "uuid",
           "description": "Unique nonce to prevent signature reuse"
+        },
+        "key_rotation": {
+          "type": "object",
+          "description": "Key rotation metadata for enhanced cryptographic security",
+          "properties": {
+            "current_key": {
+              "type": "string",
+              "description": "PEM-encoded current public key"
+            },
+            "previous_keys": {
+              "type": "array",
+              "description": "Array of previous keys for decryption of historical messages",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "public_key": {
+                    "type": "string",
+                    "description": "PEM-encoded previous public key"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When this key was created"
+                  },
+                  "deactivated": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When this key was deactivated"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "description": "Version number of this key"
+                  }
+                },
+                "required": ["public_key", "timestamp", "deactivated", "version"]
+              }
+            },
+            "rotation_timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When the current key was created"
+            },
+            "next_rotation": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Scheduled date for next key rotation"
+            },
+            "rotation_version": {
+              "type": "integer",
+              "description": "Current rotation version number"
+            }
+          },
+          "required": ["current_key", "previous_keys", "rotation_timestamp", "rotation_version"]
         }
       }
     },
