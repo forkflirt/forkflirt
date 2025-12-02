@@ -29,9 +29,11 @@ jobs:
 
           echo "Updating warrant canary to $CURRENT_DATE"
 
-          # Update README.md with new timestamp
+          # Update README.md with new timestamp and comprehensive warrant language
           sed -i "s/Last updated: [0-9-]*/Last updated: $CURRENT_DATE/" README.md
           sed -i "s/As of \*\*[0-9-]\+\*\*/As of **$CURRENT_DATE**/" README.md
+          sed -i "s/Plug Puppy LLC has not received any National Security Letters/Plug Puppy LLC has not received any warrants (government orders, subpoenas, NSLs, etc.)/" README.md
+          sed -i "s/Plug Puppy LLC has not received any gag orders/Plug Puppy LLC has not received any gag orders or non-disclosure requirements/" README.md
 
           # Update timestamp in canary update log (if it exists)
           echo "[$CURRENT_ISO] Automated warrant canary update completed" >> CANARY_UPDATES.log

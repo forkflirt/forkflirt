@@ -93,8 +93,8 @@ We rely on **Cross-Platform Identity**, not commit history. Since many Nerds (wr
 ### 🕊️ Warrant Canary
 
 As of **December 1, 2025**:
-- Plug Puppy LLC has not received any National Security Letters
-- Plug Puppy LLC has not received any gag orders
+- Plug Puppy LLC has not received any warrants (government orders, subpoenas, NSLs, etc.)
+- Plug Puppy LLC has not received any gag orders or non-disclosure requirements
 - Plug Puppy LLC has not been compelled to modify the ForkFlirt codebase
 - Plug Puppy LLC has not been required to hand over user data
 
@@ -104,7 +104,6 @@ This canary is automatically updated monthly. If this section is removed or not 
 **Update method**: Automated GitHub Actions (`.github/workflows/warrant-canary.yml`)
 **Immutable record**: `canary-2025-12-01` tag
 
-*Administrators: Disable this workflow in GitHub repository settings if compelled by legal process.*
 
 ### 🔒 Privacy & Security
 
