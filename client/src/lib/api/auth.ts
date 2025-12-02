@@ -3,6 +3,7 @@ import { initializeOctokit } from "./github";
 
 const TOKEN_DB_KEY = "forkflirt_pat";
 const USER_CACHE_KEY = "forkflirt_user_cache";
+const TOKEN_CREATED_KEY = "forkflirt_pat_created";
 
 // --- Enhanced Rate Limiting ---
 
@@ -328,41 +329,56 @@ export async function loginWithToken(
       throw new Error("CAPTCHA verification required. Please refresh and complete the CAPTCHA challenge.");
     }
   }
-  
+
   // Increment rate limit counter
   await incrementRateLimit();
 
   initializeOctokit(token);
 
   try {
-    const response = await fetch("https://api.github.com/user", {
+    // Validate token and get user info
+    const userResponse = await fetch("https://api.github.com/user", {
       headers: {
         Authorization: `token ${token}`,
         Accept: "application/vnd.github.v3+json",
       },
     });
 
-    if (!response.ok) {
-      if (response.status === 401) {
+    if (!userResponse.ok) {
+      if (userResponse.status === 401) {
         throw new Error("Invalid token. Please check your GitHub Personal Access Token.");
-      } else if (response.status === 403) {
+      } else if (userResponse.status === 403) {
         throw new Error("Token lacks required permissions. Ensure it has 'public_repo' and 'user:read' scopes.");
       } else {
         throw new Error("GitHub API error. Please try again later.");
       }
     }
 
-    const data = await response.json();
+    const userData = await userResponse.json();
+
+    // Validate token has required scopes by testing repository access
+    const repoTestResponse = await fetch("https://api.github.com/user/repos", {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    });
+
+    if (!repoTestResponse.ok) {
+      throw new Error("Token missing required 'public_repo' scope. Please recreate your token with the correct permissions.");
+    }
+
     const user: AuthUser = {
-      login: data.login,
-      avatar_url: data.avatar_url,
-      html_url: data.html_url,
-      name: data.name,
+      login: userData.login,
+      avatar_url: userData.avatar_url,
+      html_url: userData.html_url,
+      name: userData.name,
     };
 
     await set(TOKEN_DB_KEY, token);
+    await set(TOKEN_CREATED_KEY, Date.now().toString());
     localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
-    
+
     // Clear CSRF token after successful login
     clearCSRFTokens();
 
@@ -378,13 +394,37 @@ export async function loginWithToken(
 
 export async function logout() {
   await del(TOKEN_DB_KEY);
+  await del(TOKEN_CREATED_KEY);
   localStorage.removeItem(USER_CACHE_KEY);
   initializeOctokit();
   window.location.reload();
 }
 
 export async function getToken(): Promise<string | undefined> {
-  return await get<string>(TOKEN_DB_KEY);
+  const token = await get<string>(TOKEN_DB_KEY);
+  if (!token) return undefined;
+
+  // Validate token is still valid
+  try {
+    const response = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    });
+
+    if (!response.ok) {
+      // Token is invalid, clear it
+      await logout();
+      return undefined;
+    }
+
+    return token;
+  } catch (error) {
+    // Network error or token invalid, clear to be safe
+    await logout();
+    return undefined;
+  }
 }
 
 export function isOwner(repoOwner: string): boolean {
@@ -392,6 +432,34 @@ export function isOwner(repoOwner: string): boolean {
   if (!userStr) return false;
   const user = JSON.parse(userStr) as AuthUser;
   return user.login.toLowerCase() === repoOwner.toLowerCase();
+}
+
+// --- Token Security Management ---
+
+/**
+ * Check if token should be rotated based on age
+ */
+export async function shouldRotateToken(): Promise<boolean> {
+  const tokenCreated = await get<string>(TOKEN_CREATED_KEY);
+  if (!tokenCreated) return false;
+
+  const createdTime = parseInt(tokenCreated);
+  const tokenAge = Date.now() - createdTime;
+  const ninetyDays = 90 * 24 * 60 * 60 * 1000; // 90 days in milliseconds
+
+  return tokenAge > ninetyDays;
+}
+
+/**
+ * Get token age in days
+ */
+export async function getTokenAge(): Promise<number> {
+  const tokenCreated = await get<string>(TOKEN_CREATED_KEY);
+  if (!tokenCreated) return 0;
+
+  const createdTime = parseInt(tokenCreated);
+  const tokenAge = Date.now() - createdTime;
+  return Math.floor(tokenAge / (24 * 60 * 60 * 1000)); // days
 }
 
 // --- The Magic Link Generator ---
