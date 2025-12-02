@@ -6,5 +6,6 @@ export default defineConfig({
 	plugins: [sveltekit(), tailwindcss()],
 	define: {
 		// Add any environment variables here if needed
-	}
+	},
+	publicDir: 'static'
 });
