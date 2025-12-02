@@ -15,3 +15,7 @@ I reviewed github terms / AUP and, as best as I can tell, this doesnt actually v
 Thats pretty much it. Take it or leave it.
 
 - travofoz
+
+### PS
+
+yes of course its slop. mmm mmm delicious slop.
