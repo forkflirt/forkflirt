@@ -1,5 +1,6 @@
 import { get, set, del } from "idb-keyval";
 import zxcvbn from 'zxcvbn';
+import { KeyRotationManager, type KeyRotationData } from './key-rotation';
 
 const PRIVATE_KEY_DB = "forkflirt_priv_key";
 const PUBLIC_KEY_DB = "forkflirt_pub_key";
@@ -385,5 +386,135 @@ export async function hasAnyIdentityData(): Promise<boolean> {
     return hasEncrypted || hasLegacy || hasLocalStorageData;
   } catch {
     return false;
+  }
+}
+
+// --- Key Rotation Functions ---
+
+/**
+ * Generates a new RSA-OAEP-2048 Keypair and performs key rotation.
+ * This creates a new keypair and updates the key rotation data.
+ */
+export async function rotateIdentityWithPassphrase(
+  passphrase: string,
+  currentRotationData?: KeyRotationData
+): Promise<{ keyPair: KeyPair; rotationData: KeyRotationData }> {
+  const validation = validatePassphrase(passphrase);
+  if (!validation.valid) {
+    throw new Error(validation.reason);
+  }
+
+  // Generate new keypair
+  const newKeyPair = await window.crypto.subtle.generateKey(
+    {
+      name: "RSA-OAEP",
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    true, // Extractable for wrapping
+    ["encrypt", "decrypt"]
+  );
+
+  // Encrypt and store new private key
+  const salt = window.crypto.getRandomValues(new Uint8Array(16));
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const encryptionKey = await deriveEncryptionKey(passphrase, salt);
+
+  const wrappedKey = await window.crypto.subtle.wrapKey(
+    "pkcs8",
+    newKeyPair.privateKey,
+    encryptionKey,
+    { name: "AES-GCM", iv }
+  );
+
+  const encryptedKey: EncryptedPrivateKey = {
+    algorithm: "AES-GCM",
+    salt,
+    iv,
+    wrappedKey,
+    version: 1
+  };
+
+  // Store new encrypted key
+  await set(ENCRYPTED_PRIVATE_KEY_DB, encryptedKey);
+
+  // Get new public key PEM
+  const newPublicKeyPem = await exportPublicKeyToPEM(newKeyPair.publicKey);
+
+  // Update rotation data
+  const rotationData = currentRotationData || KeyRotationManager.initializeKeyRotation(newPublicKeyPem);
+  const updatedRotationData = KeyRotationManager.rotateKey(rotationData, newPublicKeyPem);
+
+  // Store updated public key
+  await set(PUBLIC_KEY_DB, newKeyPair.publicKey);
+
+  return {
+    keyPair: newKeyPair,
+    rotationData: updatedRotationData
+  };
+}
+
+/**
+ * Checks if the current identity needs rotation based on configured schedule
+ */
+export async function needsKeyRotation(): Promise<boolean> {
+  try {
+    // Check if we have rotation data in localStorage
+    const rotationDataStr = localStorage.getItem('forkflirt_key_rotation_data');
+    if (!rotationDataStr) {
+      return false; // No rotation data means no schedule to check
+    }
+
+    const rotationData = JSON.parse(rotationDataStr) as KeyRotationData;
+    return KeyRotationManager.needsRotation(rotationData);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Save key rotation data to localStorage for persistence
+ */
+export async function saveKeyRotationData(rotationData: KeyRotationData): Promise<void> {
+  try {
+    localStorage.setItem('forkflirt_key_rotation_data', JSON.stringify(rotationData));
+  } catch (error) {
+    console.error('Failed to save key rotation data:', error);
+  }
+}
+
+/**
+ * Load key rotation data from localStorage
+ */
+export async function loadKeyRotationData(): Promise<KeyRotationData | null> {
+  try {
+    const data = localStorage.getItem('forkflirt_key_rotation_data');
+    return data ? JSON.parse(data) as KeyRotationData : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Migrate legacy identity to use key rotation
+ */
+export async function migrateToKeyRotation(): Promise<KeyRotationData | null> {
+  try {
+    const publicKey = await get<CryptoKey>(PUBLIC_KEY_DB);
+    if (!publicKey) {
+      return null;
+    }
+
+    const publicKeyPem = await exportPublicKeyToPEM(publicKey);
+    const rotationData = KeyRotationManager.initializeKeyRotation(publicKeyPem);
+
+    await saveKeyRotationData(rotationData);
+
+    console.log('✅ Identity migrated to key rotation system');
+    return rotationData;
+  } catch (error) {
+    console.error('❌ Failed to migrate to key rotation:', error);
+    return null;
   }
 }
