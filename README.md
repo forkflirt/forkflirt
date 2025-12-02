@@ -88,6 +88,51 @@ We rely on **Cross-Platform Identity**, not commit history. Since many Nerds (wr
 
 ---
 
+## Transparency & Safety
+
+### 🕊️ Warrant Canary
+
+As of **December 1, 2025**:
+- Plug Puppy LLC has not received any National Security Letters
+- Plug Puppy LLC has not received any gag orders
+- Plug Puppy LLC has not been compelled to modify the ForkFlirt codebase
+- Plug Puppy LLC has not been required to hand over user data
+
+This canary is automatically updated monthly. If this section is removed or not updated for 60 days, assume compromise.
+
+**Last updated**: December 1, 2025
+**Update method**: Automated GitHub Actions (`.github/workflows/warrant-canary.yml`)
+**Immutable record**: `canary-2025-12-01` tag
+
+*Administrators: Disable this workflow in GitHub repository settings if compelled by legal process.*
+
+### 🔒 Privacy & Security
+
+ForkFlirt is built on public GitHub repositories, which provides decentralization and data ownership but comes with inherent tradeoffs:
+
+#### What's Private
+- ✅ Message content (end-to-end encrypted)
+- ✅ Private keys (never leave your device)
+- ✅ Passphrase (never stored, only used for key derivation)
+
+#### What's Public
+- ⚠️ Profile data (stored in public GitHub repo)
+- ⚠️ Profile existence (discoverable via GitHub search)
+- ⚠️ Interaction metadata (who creates Issues on whose repo)
+- ⚠️ GitHub contribution graph
+
+#### Privacy Best Practices
+- Use a dedicated GitHub account for ForkFlirt
+- Consider using approximate locations instead of exact city
+- Keep profile information minimal and non-specific
+- Use blocklists to control interactions
+- Regularly review who can see your profile
+- Enable the panic button in settings for emergency data deletion
+
+For detailed security information, see [SECURITY.md](./SECURITY.md)
+
+---
+
 ## 🤝 Contributing
 
 We are an **Open Code** organization.

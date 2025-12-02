@@ -190,18 +190,22 @@ export async function getPrivateKeyWithPassphrase(
   const encryptedKey = await get<EncryptedPrivateKey>(
     ENCRYPTED_PRIVATE_KEY_DB
   );
-  
+
   if (!encryptedKey) {
+    // Constant-time delay even when no key exists to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 100));
     throw new Error("No encrypted private key found");
   }
 
   const encryptionKey = await deriveEncryptionKey(
-    passphrase, 
+    passphrase,
     encryptedKey.salt
   );
 
   try {
-    return await window.crypto.subtle.unwrapKey(
+    const startTime = Date.now();
+
+    const key = await window.crypto.subtle.unwrapKey(
       "pkcs8",
       encryptedKey.wrappedKey,
       encryptionKey,
@@ -210,7 +214,18 @@ export async function getPrivateKeyWithPassphrase(
       true,
       ["decrypt"]
     );
+
+    // Constant-time delay to prevent timing analysis
+    const elapsed = Date.now() - startTime;
+    const minDelay = 100; // minimum 100ms
+    if (elapsed < minDelay) {
+      await new Promise(resolve => setTimeout(resolve, minDelay - elapsed));
+    }
+
+    return key;
   } catch (error) {
+    // Same constant-time delay on error to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 100));
     throw new Error("Invalid passphrase or corrupted key");
   }
 }

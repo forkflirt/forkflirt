@@ -153,7 +153,21 @@
         "public_key": { "type": "string" },
         "fingerprint": { "type": "string" },
         "key_type": { "type": "string" },
-        "signature": { "type": "string" }
+        "signature": { "type": "string" },
+        "profile_signature": {
+          "type": "string",
+          "description": "Base64-encoded RSA-PSS signature of the profile content"
+        },
+        "signature_timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the profile was signed"
+        },
+        "signature_nonce": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique nonce to prevent signature reuse"
+        }
       }
     },
     "preferences": {
@@ -162,6 +176,26 @@
         "looking_for": { "type": "array", "items": { "type": "string" } },
         "age_range": { "type": "array", "items": { "type": "integer" } },
         "distance_km": { "type": "integer" },
+        "discovery": {
+          "type": "object",
+          "description": "Hints for client behavior (not enforced)",
+          "properties": {
+            "allow_caching": {
+              "type": "boolean",
+              "default": true,
+              "description": "Hint: request clients not cache this profile long-term"
+            },
+            "max_cache_duration": {
+              "type": "integer",
+              "description": "Suggested cache TTL in seconds (default 86400 = 24h)"
+            },
+            "require_authentication": {
+              "type": "boolean",
+              "default": false,
+              "description": "Hint: request clients only show to authenticated users"
+            }
+          }
+        },
         "match_filter": {
           "type": "object",
           "properties": {

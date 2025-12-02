@@ -1,4 +1,5 @@
 import type { Profile } from "../schemas/validator";
+import { fuzzyKeywordMatch, detectObfuscationPatterns, behavioralBlockList } from "./behavioral-blocking";
 
 // --- Types ---
 
@@ -112,11 +113,11 @@ async function processImports(rules: BlockRules, depth: number) {
 /**
  * Checks if a profile should be hidden based on the rules.
  */
-export function isBlocked(
+export async function isBlocked(
   candidateProfile: Profile,
   candidateUsername: string,
   rules: BlockRules
-): boolean {
+): Promise<boolean> {
   // 1. User Block
   if (rules.blockedUsers.has(candidateUsername.toLowerCase())) {
     return true;
@@ -131,14 +132,38 @@ export function isBlocked(
     }
   }
 
-  // 3. Keyword Filter (Bio check)
+  // 3. Enhanced Keyword Filter (Bio check with fuzzy matching)
   if (candidateProfile.content.bio) {
-    const bioLower = candidateProfile.content.bio.toLowerCase();
+    const bio = candidateProfile.content.bio;
+
+    // Check for obfuscation patterns first
+    if (detectObfuscationPatterns(bio)) {
+      // Flag for potential blocklist bypass attempt
+      console.warn(`Obfuscation detected in bio for ${candidateUsername}`);
+      // Don't block immediately, but could be used for behavioral analysis
+    }
+
+    // Use fuzzy matching to detect obfuscated keywords
+    for (const kw of rules.filteredKeywords) {
+      if (fuzzyKeywordMatch(bio, kw)) {
+        console.log(`Blocked keyword detected via fuzzy matching: "${kw}" in ${candidateUsername}'s bio`);
+        return true;
+      }
+    }
+
+    // Fallback to exact match for backward compatibility
+    const bioLower = bio.toLowerCase();
     for (const kw of rules.filteredKeywords) {
       if (bioLower.includes(kw)) {
         return true;
       }
     }
+  }
+
+  // 4. Behavioral Blocking Check
+  if (await behavioralBlockList.isBlocked(candidateUsername)) {
+    console.log(`User ${candidateUsername} is behaviorally blocked`);
+    return true;
   }
 
   return false;

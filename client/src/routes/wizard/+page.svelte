@@ -23,7 +23,16 @@
     try {
       const { generateIdentityWithPassphrase } = await import('$lib/crypto/keys.js');
       await generateIdentityWithPassphrase(passphrase);
-      
+
+      // CRITICAL: Clear passphrases from memory immediately after use
+      passphrase = '';
+      passphraseConfirm = '';
+
+      // Force garbage collection hint
+      if (window.gc) {
+        window.gc();
+      }
+
       // Update store to reflect new keys
       profileUpdated({
         identity: {
@@ -39,10 +48,19 @@
           public_key: ''
         }
       });
-      
+
       step = 3; // Success
     } catch (err: any) {
       error = err.message || 'Key generation failed';
+
+      // CRITICAL: Clear passphrases even on error
+      passphrase = '';
+      passphraseConfirm = '';
+
+      // Force garbage collection hint
+      if (window.gc) {
+        window.gc();
+      }
     } finally {
       loading = false;
     }

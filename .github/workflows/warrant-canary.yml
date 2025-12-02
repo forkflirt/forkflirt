@@ -1,0 +1,100 @@
+name: Update Warrant Canary
+
+on:
+  schedule:
+    # Run on the 1st of every month at 00:00 UTC
+    - cron: '0 0 1 * *'
+  workflow_dispatch:  # Allow manual updates
+
+permissions:
+  contents: write
+
+jobs:
+  update-canary:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update canary timestamp
+        run: |
+          # Get current date in YYYY-MM-DD format
+          CURRENT_DATE=$(date +'%Y-%m-%d')
+          CURRENT_ISO=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          echo "Updating warrant canary to $CURRENT_DATE"
+
+          # Update README.md with new timestamp
+          sed -i "s/Last updated: [0-9-]*/Last updated: $CURRENT_DATE/" README.md
+          sed -i "s/As of \*\*[0-9-]\+\*\*/As of **$CURRENT_DATE**/" README.md
+
+          # Update timestamp in canary update log (if it exists)
+          echo "[$CURRENT_ISO] Automated warrant canary update completed" >> CANARY_UPDATES.log
+
+          # Show changes for verification
+          echo "Files modified:"
+          git status --porcelain
+
+      - name: Validate canary format
+        run: |
+          # Verify the canary section exists and has correct format
+          if ! grep -q "As of \*\*[0-9-]\+\*\*" README.md; then
+            echo "Error: Canary section not found or has wrong format"
+            exit 1
+          fi
+
+          # Verify the date is recent (within last day)
+          CANARY_DATE=$(grep -o "As of \*\*[0-9-]\+\*\*" README.md | grep -o "[0-9-]\+")
+          CANARY_TIMESTAMP=$(date -d "$CANARY_DATE" +%s 2>/dev/null || echo 0)
+          CURRENT_TIMESTAMP=$(date +%s)
+          DAY_IN_SECONDS=86400
+
+          if [ $((CURRENT_TIMESTAMP - CANARY_TIMESTAMP)) -gt $DAY_IN_SECONDS ]; then
+            echo "Error: Canary date seems too old: $CANARY_DATE"
+            exit 1
+          fi
+
+          echo "Canary validation passed"
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: Update warrant canary - $(date +'%Y-%m-%d')"
+          file_pattern: 'README.md CANARY_UPDATES.log'
+          commit_user_name: forkflirt-bot
+          commit_user_email: bot@forkflirt.dev
+          commit_author_name: ForkFlirt Canary Bot
+          commit_author_email: bot@forkflirt.dev
+
+      - name: Create tag for canary update
+        run: |
+          CURRENT_DATE=$(date +'%Y-%m-%d')
+          TAG_NAME="canary-$CURRENT_DATE"
+
+          # Configure git
+          git config user.name "forkflirt-bot"
+          git config user.email "bot@forkflirt.dev"
+
+          # Create and push tag (this creates an immutable record)
+          git tag -a "$TAG_NAME" -m "Warrant canary update for $CURRENT_DATE"
+          git push origin "$TAG_NAME"
+
+          echo "Created immutable tag: $TAG_NAME"
+
+      - name: Verify canary update
+        run: |
+          # Verify the tag was created
+          CURRENT_DATE=$(date +'%Y-%m-%d')
+          TAG_NAME="canary-$CURRENT_DATE"
+
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "✅ Canary update verified - tag $TAG_NAME created successfully"
+          else
+            echo "❌ Canary update failed - tag not found"
+            exit 1
+          fi

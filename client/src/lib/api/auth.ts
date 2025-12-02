@@ -393,11 +393,28 @@ export async function loginWithToken(
 }
 
 export async function logout() {
+  // Clear all session data comprehensively
+  clearCSRFTokens();
+  clearCaptcha();
+
+  // Clear IndexedDB session data
   await del(TOKEN_DB_KEY);
   await del(TOKEN_CREATED_KEY);
+
+  // Clear localStorage session data
   localStorage.removeItem(USER_CACHE_KEY);
+  localStorage.removeItem(RATE_LIMIT_DATA);
+
+  // Clear sessionStorage
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.clear();
+  }
+
+  // Reinitialize Octokit to clear in-memory state
   initializeOctokit();
-  window.location.reload();
+
+  // Hard reload to clear all in-memory state and prevent session fixation
+  window.location.href = '/';
 }
 
 export async function getToken(): Promise<string | undefined> {
