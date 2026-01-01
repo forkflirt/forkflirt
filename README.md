@@ -161,3 +161,8 @@ If you wish to create a closed-source "White Label" version of ForkFlirt for you
 
 **This software is provided "AS IS".**
 ForkFlirt is a communication protocol, not a vetted dating agency. Users are responsible for their own safety. Plug Puppy LLC assumes no liability for interactions facilitated by this software. Always verify identities and use common sense when meeting strangers.
+
+### Warrant Canary - 2026-01-01
+As of **2026-01-01**, Plug Puppy LLC has not received any government warrants, subpoenas, court orders, or surveillance demands.
+Plug Puppy LLC has not received any gag orders, National Security Letters, or non-disclosure requirements.
+### Warrant Canary - 2026-01-01
