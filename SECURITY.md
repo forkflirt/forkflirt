@@ -145,3 +145,6 @@ Plug Puppy LLC has not received any gag orders, National Security Letters, or no
 
 As of **2026-05-01**, Plug Puppy LLC has not received any government warrants, subpoenas, court orders, or surveillance demands.
 Plug Puppy LLC has not received any gag orders, National Security Letters, or non-disclosure requirements.
+
+As of **2026-06-01**, Plug Puppy LLC has not received any government warrants, subpoenas, court orders, or surveillance demands.
+Plug Puppy LLC has not received any gag orders, National Security Letters, or non-disclosure requirements.
